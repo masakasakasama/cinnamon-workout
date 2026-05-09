@@ -1160,7 +1160,7 @@
 
     ensureAudio();
     if (selected.mode === 'reps') {
-      const base = selected.key === 'burpee' ? 900 : 1200;
+      const base = selected.key === 'burpee' ? 1300 : 1600;
       const interval = Math.round(base * (SPEED_MULT[state.speed] || 1));
       rollAnimEl.style.animationDuration = interval + 'ms';
       counter.textContent = '0 / ' + selected.target;
