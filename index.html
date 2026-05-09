@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-app-version="v8">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -761,7 +761,13 @@
   </nav>
 
   <div class="toast" id="toast"></div>
-  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v7 — 今日の値をbyDayから算出</div>
+  <div id="diag" style="margin-top:14px; font-size:11px; opacity:0.7; text-align:center; line-height:1.5; color:#5a3a1f;">
+    <div>v8 — 診断パネル</div>
+    <div>📡 coupleId: <code id="diagId" style="background:#fff; padding:2px 6px; border-radius:4px;">-</code></div>
+    <div>🔄 最終受信: <span id="diagLast">-</span></div>
+    <div>📝 最終書込: <span id="diagWrite">-</span></div>
+    <div id="diagError" style="color:#c8364b; margin-top:4px;"></div>
+  </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -887,6 +893,8 @@
     refreshStats();
     if (selected) refreshCountUI();
     renderDashboard(d); // きろくタブも更新
+    $('diagLast').textContent = new Date().toLocaleTimeString('ja-JP');
+    $('diagError').textContent = '';
   }
 
   // 起動時にonSnapshot張りっぱなし — 他端末の更新が即反映される
@@ -897,9 +905,9 @@
       applyCloudData(snap.exists() ? snap.data() : {});
     }, (err) => {
       console.warn('snapshot error', err);
-      // 読込みエラー時もUIロック解除
       $('dashStatus').textContent = '同期エラー';
       $('dashRecent').innerHTML = '<div class="day-empty">読み込めなかった</div>';
+      $('diagError').textContent = '同期エラー: ' + (err.code || err.message);
       showError('同期エラー: ' + (err.code || err.message));
     });
   }
@@ -956,9 +964,12 @@
 
     try {
       await setDoc(ref, updates, { merge: true });
+      $('diagWrite').textContent = new Date().toLocaleTimeString('ja-JP') + ' (' + sess.target + sess.mode + ')';
+      $('diagError').textContent = '';
     } catch (e) {
       console.warn('cloudCommitSession failed', e);
       showError('保存失敗💦 ' + (e.code || e.message || 'unknown'));
+      $('diagError').textContent = '保存失敗: ' + (e.code || e.message);
     }
   }
 
@@ -1343,6 +1354,24 @@
       : '<div class="day-empty">まだ何もしてないよ〜</div>';
     $('dashRecent').innerHTML = dailyHtml;
   }
+
+  // ===== auto-update check =====
+  const APP_VERSION = document.documentElement.dataset.appVersion;
+  $('diagId').textContent = COUPLE_ID.slice(0, 16) + '…';
+  async function checkForUpdate() {
+    try {
+      const r = await fetch('/?_cb=' + Date.now(), { cache: 'no-store' });
+      const t = await r.text();
+      const m = t.match(/data-app-version="([^"]+)"/);
+      if (m && m[1] && m[1] !== APP_VERSION) {
+        console.log('New version detected:', m[1], '(current:', APP_VERSION, ') reloading...');
+        location.reload();
+      }
+    } catch (e) { /* offline, skip */ }
+  }
+  // 起動時 + 30秒ごとにチェック
+  checkForUpdate();
+  setInterval(checkForUpdate, 30 * 1000);
 
   // ===== boot =====
   applyNames();
