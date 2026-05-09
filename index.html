@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v24">
+<html lang="ja" data-app-version="v25">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -746,6 +746,41 @@
   .chart-svg { width: 100%; height: auto; display: block; }
   .chart-legend { display: flex; gap: 12px; font-size: 11px; opacity: 0.75; margin-top: 6px; }
   .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .donut-svg { width: 160px; height: 160px; flex-shrink: 0; }
+  .donut-legend {
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #5a3a1f;
+  }
+  .legend-row b {
+    margin-left: auto;
+    color: #ff7eb9;
+    font-size: 13px;
+    font-weight: 900;
+  }
+  .legend-row .legend-pct {
+    color: #888;
+    font-size: 10px;
+    margin-left: 4px;
+    min-width: 28px;
+    text-align: right;
+  }
 
   /* ===== edit form ===== */
   .edit-card {
@@ -1090,12 +1125,8 @@
     </div>
 
     <div class="chart-card">
-      <h3>📊 直近14日の回数 <small>(タップで秒数も)</small></h3>
+      <h3>🍩 直近14日のバランス <small>(消費kcal比率)</small></h3>
       <div id="chart"></div>
-      <div class="chart-legend">
-        <span><span class="legend-dot" style="background:#d2691e"></span>回数</span>
-        <span><span class="legend-dot" style="background:#5cb6e8"></span>秒数(プランク)</span>
-      </div>
     </div>
 
     <div class="chart-card">
@@ -2004,38 +2035,57 @@
     const dt = new Date(y, m-1, d);
     return `${m}月${d}日 (${WEEK[dt.getDay()]})`;
   }
+  // 直近14日の種目別カロリー比率をドーナツチャートで表示
   function renderChart(byDay) {
-    const days = [];
-    for (let i = 13; i >= 0; i--) {
+    const cals = {};
+    EX_ORDER.forEach(typ => cals[typ] = 0);
+    for (let i = 0; i < 14; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const ymd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      const e = byDay[ymd] || {};
-      const reps = (e.squat || 0) + (e.pushup || 0) + (e.burpee || 0);
-      const secs = e.plank || 0;
-      days.push({ ymd, reps, secs, label: (d.getMonth()+1) + '/' + d.getDate(), dow: d.getDay() });
+      const e = byDay[ymd];
+      if (!e) continue;
+      EX_ORDER.forEach(typ => cals[typ] += calForType(typ, e[typ] || 0));
     }
-    const max = Math.max(1, ...days.map(d => d.reps), ...days.map(d => d.secs));
-    const W = 320, H = 160, padTop = 14, padBottom = 26, padX = 6;
-    const barW = (W - padX*2) / days.length - 2;
-    const innerH = H - padTop - padBottom;
-    const bars = days.map((d, i) => {
-      const x = padX + i * ((W - padX*2) / days.length) + 1;
-      const repsH = (d.reps / max) * innerH;
-      const secsH = (d.secs / max) * innerH;
-      const baseY = H - padBottom;
-      const isToday = i === days.length - 1;
-      return `
-        <g>
-          ${d.reps ? `<rect x="${x}" y="${baseY - repsH}" width="${barW/2 - 0.5}" height="${repsH}" fill="#d2691e" rx="2"/>` : ''}
-          ${d.secs ? `<rect x="${x + barW/2 + 0.5}" y="${baseY - secsH}" width="${barW/2 - 0.5}" height="${secsH}" fill="#5cb6e8" rx="2"/>` : ''}
-          <text x="${x + barW/2}" y="${H - 12}" font-size="9" text-anchor="middle" fill="${isToday ? '#d2691e' : '#888'}" font-weight="${isToday ? 'bold' : 'normal'}">${d.label}</text>
-        </g>`;
+    const total = EX_ORDER.reduce((s, t) => s + cals[t], 0);
+    if (total < 0.05) {
+      $('chart').innerHTML = '<div style="text-align:center; padding:30px 0; opacity:0.6; font-size:13px;">直近14日のデータなし<br>筋トレを始めよう♡</div>';
+      return;
+    }
+    const COLORS = { squat: '#ff7eb9', situp: '#ffb988', burpee: '#a8d4f5', plank: '#b896f5' };
+    const cx = 90, cy = 90, r = 65, ir = 38;
+    let cumDeg = -90; // 12時から開始
+    function arc(startDeg, endDeg, color) {
+      const sR = startDeg * Math.PI / 180;
+      const eR = endDeg * Math.PI / 180;
+      const x1 = cx + r * Math.cos(sR), y1 = cy + r * Math.sin(sR);
+      const x2 = cx + r * Math.cos(eR), y2 = cy + r * Math.sin(eR);
+      const xi1 = cx + ir * Math.cos(eR), yi1 = cy + ir * Math.sin(eR);
+      const xi2 = cx + ir * Math.cos(sR), yi2 = cy + ir * Math.sin(sR);
+      const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+      return `<path d="M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${ir} ${ir} 0 ${largeArc} 0 ${xi2} ${yi2} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
+    }
+    const present = EX_ORDER.filter(t => cals[t] > 0);
+    const slices = present.map(typ => {
+      const portion = cals[typ] / total;
+      const startDeg = cumDeg;
+      cumDeg += portion * 360 - 0.001; // 浮動小数誤差で全周超え防止
+      return arc(startDeg, cumDeg, COLORS[typ]);
     }).join('');
-    $('chart').innerHTML = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-      <line x1="${padX}" y1="${H - padBottom}" x2="${W - padX}" y2="${H - padBottom}" stroke="#cfe3f5" stroke-width="1"/>
-      ${bars}
-    </svg>`;
+    const legendRows = present.map(typ => {
+      const pct = Math.round(cals[typ] / total * 100);
+      return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[typ]}"></span>${EX_ICON[typ]} ${EX_LABEL[typ]}<b>${cals[typ].toFixed(1)}kcal</b><span class="legend-pct">${pct}%</span></div>`;
+    }).join('');
+    $('chart').innerHTML = `
+      <div class="donut-wrap">
+        <svg viewBox="0 0 180 180" class="donut-svg">
+          ${slices}
+          <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="10" fill="#888">14日合計</text>
+          <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="20" font-weight="900" fill="#ff7eb9">${total.toFixed(1)}</text>
+          <text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="10" fill="#888">kcal</text>
+        </svg>
+        <div class="donut-legend">${legendRows}</div>
+      </div>`;
   }
 
   function renderDashboard(d) {
