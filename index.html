@@ -147,6 +147,11 @@
     50% { transform: translateY(-45px) scaleY(1.1); }
     75% { transform: translateY(20px) scaleY(0.6); }
   }
+  .roll[data-anim="situp"] .roll-anim { animation: situp 1.2s ease-in-out infinite; transform-origin: bottom center; }
+  @keyframes situp {
+    0%, 100% { transform: rotate(-30deg) translateY(8px); }
+    50% { transform: rotate(10deg) translateY(-4px); }
+  }
 
   .speech {
     position: absolute;
@@ -233,6 +238,49 @@
     box-shadow: 0 4px 12px rgba(210, 105, 30, 0.35);
   }
 
+  .menu-btn.full { grid-column: 1 / -1; }
+
+  .count-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 10px;
+    background: #fff;
+    border: 2px solid #ffb988;
+    border-radius: 14px;
+    padding: 8px 14px;
+  }
+  .count-row.hidden { display: none; }
+  .count-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #8b4513;
+  }
+  .count-step {
+    background: #ffe5d0;
+    border: none;
+    border-radius: 50%;
+    width: 34px; height: 34px;
+    font-size: 20px;
+    font-weight: 900;
+    color: #8b4513;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+  }
+  .count-step:active { transform: translateY(1px); background: #ffd0a8; }
+  .count-value {
+    min-width: 70px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: #d2691e;
+  }
+  .count-value small { font-size: 13px; opacity: 0.7; margin-left: 2px; }
+
   .speed-row {
     display: flex;
     gap: 6px;
@@ -240,6 +288,7 @@
     max-width: 360px;
     margin-bottom: 10px;
   }
+  .speed-row.hidden { display: none; }
   .speed-btn {
     flex: 1;
     background: #fff;
@@ -353,6 +402,23 @@
     text-align: center;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .sound-toggle {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    border: 2px solid #ffd6c2;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 60;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-family: inherit;
+  }
+  .sound-toggle:active { transform: scale(0.94); }
 
   /* ===== stats card layout ===== */
   .dash-grid {
@@ -516,6 +582,7 @@
 </style>
 </head>
 <body>
+  <button id="soundBtn" class="sound-toggle" aria-label="音 ON/OFF">🔊</button>
   <h1>シナモンロールと筋トレ 💕</h1>
   <p class="subtitle" id="subtitle">いっしょにがんばろう！</p>
 
@@ -583,10 +650,18 @@
   <div class="counter" id="counter">--</div>
 
   <div class="controls">
-    <button class="menu-btn" data-key="squat" data-target="10" data-mode="reps">スクワット 10回</button>
-    <button class="menu-btn" data-key="pushup" data-target="10" data-mode="reps">腕立て 10回</button>
-    <button class="menu-btn" data-key="plank" data-target="30" data-mode="time">プランク 30秒</button>
-    <button class="menu-btn" data-key="burpee" data-target="8" data-mode="reps">バーピー 8回</button>
+    <button class="menu-btn" data-key="squat" data-mode="reps">🦵 スクワット</button>
+    <button class="menu-btn" data-key="pushup" data-mode="reps">💪 腕立て</button>
+    <button class="menu-btn" data-key="situp" data-mode="reps">🤰 腹筋</button>
+    <button class="menu-btn" data-key="plank" data-mode="time">🧘 プランク</button>
+    <button class="menu-btn full" data-key="burpee" data-mode="reps">🤸 バーピー</button>
+  </div>
+
+  <div class="count-row" id="countRow">
+    <span class="count-label" id="countLabel">目標</span>
+    <button class="count-step" data-delta="-5">−</button>
+    <span class="count-value"><span id="countValue">--</span><small id="countUnit"></small></span>
+    <button class="count-step" data-delta="5">+</button>
   </div>
 
   <div class="speed-row" id="speedRow">
@@ -664,10 +739,6 @@
   <section class="tab-content" id="tabEdit" hidden>
     <div class="edit-card">
       <h3>💕 名前・応援メッセージ</h3>
-      <div class="edit-row">
-        <label>🥐 彼女の名前</label>
-        <input id="inputHer" type="text" placeholder="ななちゃん" maxlength="14">
-      </div>
       <div class="edit-row">
         <label>💕 自分の名前</label>
         <input id="inputMe" type="text" placeholder="あなた" maxlength="14">
@@ -767,10 +838,12 @@
         total: s.total || { reps: 0, sec: 0 },
         recent: s.recent || [],
         byDay: s.byDay || {},
-        speed: s.speed || 'normal'
+        speed: s.speed || 'normal',
+        targets: s.targets || { squat:10, pushup:10, situp:15, plank:30, burpee:8 },
+        soundOn: s.soundOn !== false
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal' };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:8}, soundOn:true };
     }
   }
   const state = loadState();
@@ -791,6 +864,8 @@
 
   // 固定IDを常に使う — 共有リンク無し、URL一個で完結
   state.coupleId = COUPLE_ID;
+  // 名前は固定: レベッカ
+  state.her = 'レベッカ';
   saveState();
   const urlParams = new URLSearchParams(location.search);
   const isViewMode = urlParams.get('view') === 'me'; // 後方互換: ブックマーク用
@@ -802,7 +877,7 @@
   }
 
   function applyNames() {
-    const her = state.her || 'きみ';
+    const her = state.her || 'レベッカ';
     subtitle.innerHTML = '<b>' + escapeHtml(her) + '</b>、いっしょにがんばろう！';
     document.title = her + 'の筋トレ 🥐💕';
 
@@ -840,6 +915,7 @@
       if (d.total) state.total = d.total;
       if (Array.isArray(d.recent)) state.recent = d.recent;
       if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
+      if (d.targets && typeof d.targets === 'object') state.targets = { ...state.targets, ...d.targets };
       // reset today if rolled over locally
       if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
       saveState();
@@ -862,6 +938,7 @@
         total: state.total,
         recent: (state.recent || []).slice(-50),
         byDay: state.byDay || {},
+        targets: state.targets || {},
         updatedAt: Date.now()
       }, { merge: true });
     } catch (e) {
@@ -871,7 +948,7 @@
   }
 
   // ===== speech (named cheers) =====
-  function n() { return state.her || 'きみ'; }
+  function n() { return state.her || 'レベッカ'; }
   const cheers = {
     start: () => [`${n()}、いくよ〜！`, `ファイト〜${n()}！`, `${n()}、よーいスタート！`, `いっしょにがんばろ、${n()}♡`],
     mid:   () => [`${n()}、その調子！`, `いいぞ〜${n()}！`, `あとちょっと${n()}！`, `${n()}えらい！`, `ナイス${n()}っ！`],
@@ -909,28 +986,95 @@
     toast._t = setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
+  // ===== sound (Web Audio synth, no copyrighted assets) =====
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beep(freq=700, dur=80, type='sine', vol=0.22) {
+    if (!state.soundOn || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur/1000);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0);
+    o.stop(t0 + dur/1000);
+  }
+  function successMelody() {
+    if (!state.soundOn) return;
+    const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
+    notes.forEach((f, i) => setTimeout(() => beep(f, 180, 'triangle', 0.25), i * 120));
+  }
+  const soundBtn = $('soundBtn');
+  function refreshSoundUI() { soundBtn.textContent = state.soundOn ? '🔊' : '🔇'; }
+  soundBtn.addEventListener('click', () => {
+    state.soundOn = !state.soundOn;
+    saveState();
+    refreshSoundUI();
+    if (state.soundOn) { ensureAudio(); beep(900, 80); }
+  });
+  refreshSoundUI();
+
   // ===== workout =====
   let selected = null;
   let running = false;
   let count = 0;
   let timerId = null;
 
+  const speedRow = $('speedRow');
+  const countRow = $('countRow');
+  function refreshCountUI() {
+    if (!selected) {
+      countRow.classList.add('hidden');
+      return;
+    }
+    countRow.classList.remove('hidden');
+    const t = state.targets[selected.key];
+    selected.target = t;
+    $('countValue').textContent = t;
+    $('countUnit').textContent = EX_UNIT[selected.key] || '';
+    counterLabel.textContent = `${EX_ICON[selected.key]} ${EX_LABEL[selected.key]} ${t}${EX_UNIT[selected.key]} 準備OK`;
+    counter.textContent = selected.mode === 'time' ? t + '秒' : '0 / ' + t;
+  }
   menuBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       if (running) return;
+      ensureAudio();
       menuBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      const key = btn.dataset.key;
       selected = {
-        key: btn.dataset.key,
-        target: parseInt(btn.dataset.target, 10),
+        key,
+        target: state.targets[key],
         mode: btn.dataset.mode,
-        label: btn.textContent
+        label: `${EX_ICON[key]} ${EX_LABEL[key]}`
       };
-      counterLabel.textContent = selected.label + ' 準備OK';
-      counter.textContent = selected.mode === 'time' ? selected.target + '秒' : '0 / ' + selected.target;
+      // プランクは速さ無関係なので速さセレクタ非表示
+      speedRow.classList.toggle('hidden', selected.mode === 'time');
+      refreshCountUI();
       startBtn.disabled = false;
       setAnim(selected.key);
       showSpeech(`${n()}、やる気まんまん！`, 1500);
+    });
+  });
+
+  // 回数 -/+ ボタン
+  document.querySelectorAll('.count-step').forEach(b => {
+    b.addEventListener('click', () => {
+      if (running || !selected) return;
+      const delta = parseInt(b.dataset.delta, 10);
+      const cur = state.targets[selected.key] || 0;
+      const next = Math.max(1, Math.min(999, cur + delta));
+      state.targets[selected.key] = next;
+      saveState();
+      cloudSave();
+      refreshCountUI();
     });
   });
 
@@ -998,6 +1142,7 @@
     if (success) {
       showSpeech(pick(cheers.end()), 2600);
       spawnHearts(22);
+      successMelody();
       recordSession();
       counterLabel.textContent = `${n()}、おつかれさま♡`;
     }
@@ -1013,16 +1158,20 @@
     setAnim(selected.key);
     showSpeech(pick(cheers.start()), 1500);
 
+    ensureAudio();
     if (selected.mode === 'reps') {
       const base = selected.key === 'burpee' ? 900 : 1200;
       const interval = Math.round(base * (SPEED_MULT[state.speed] || 1));
-      // アニメーションも1回ぶんで1サイクルするよう連動
       rollAnimEl.style.animationDuration = interval + 'ms';
       counter.textContent = '0 / ' + selected.target;
       timerId = setInterval(() => {
         count++;
         counter.textContent = count + ' / ' + selected.target;
-        if (count === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid()), 1400);
+        beep(700, 60, 'sine', 0.18); // 各回のビート
+        if (count === Math.floor(selected.target / 2)) {
+          showSpeech(pick(cheers.mid()), 1400);
+          beep(1100, 120, 'triangle', 0.25);
+        }
         if (count >= selected.target) finish(true);
       }, interval);
     } else {
@@ -1031,6 +1180,8 @@
       timerId = setInterval(() => {
         remain--;
         counter.textContent = remain + '秒';
+        // 残り3秒からカウントダウン音、それ以外は静か
+        if (remain > 0 && remain <= 3) beep(900, 80, 'sine', 0.22);
         if (remain === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid()), 1400);
         if (remain <= 0) finish(true);
       }, 1000);
@@ -1049,11 +1200,9 @@
   });
 
   // ===== edit forms =====
-  const inputHer = $('inputHer');
   const inputMe  = $('inputMe');
   const inputMsg = $('inputMsg');
   function fillEditForm() {
-    inputHer.value = state.her || '';
     inputMe.value  = state.me  || '';
     inputMsg.value = state.msg || '';
     $('editStreak').value     = state.streak || 0;
@@ -1064,11 +1213,11 @@
   }
 
   $('saveBtn').addEventListener('click', () => {
-    const her = (inputHer.value || '').trim().slice(0, 14);
     const me  = (inputMe.value  || '').trim().slice(0, 14);
     const msg = (inputMsg.value || '').trim().slice(0, 80);
-    if (!her) { showToast('彼女の名前を入れてね💦'); inputHer.focus(); return; }
-    state.her = her; state.me = me; state.msg = msg;
+    state.her = 'レベッカ';
+    state.me = me;
+    state.msg = msg;
     saveState();
     applyNames();
     cloudSave();
@@ -1126,9 +1275,9 @@
     if (hr < 24) return hr + '時間前';
     return Math.floor(hr / 24) + '日前';
   }
-  const EX_LABEL = { squat: 'スクワット', pushup: '腕立て', plank: 'プランク', burpee: 'バーピー' };
-  const EX_ICON  = { squat: '🦵', pushup: '💪', plank: '🧘', burpee: '🤸' };
-  const EX_UNIT  = { squat: '回', pushup: '回', plank: '秒', burpee: '回' };
+  const EX_LABEL = { squat: 'スクワット', pushup: '腕立て', situp: '腹筋', plank: 'プランク', burpee: 'バーピー' };
+  const EX_ICON  = { squat: '🦵', pushup: '💪', situp: '🤰', plank: '🧘', burpee: '🤸' };
+  const EX_UNIT  = { squat: '回', pushup: '回', situp: '回', plank: '秒', burpee: '回' };
   const WEEK = ['日','月','火','水','木','金','土'];
   function formatDay(ymd) {
     const [y, m, d] = ymd.split('-').map(Number);
@@ -1170,7 +1319,7 @@
   }
 
   function renderDashboard(d) {
-    const her = d.her || 'きみ';
+    const her = d.her || 'レベッカ';
     $('dashName').textContent = her + 'のがんばり';
     $('dashStreak').textContent = d.streak || 0;
     $('dashTodayReps').textContent = (d.today && d.today.reps) || 0;
