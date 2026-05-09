@@ -3,28 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>シナモンロールと筋トレ</title>
+<meta name="theme-color" content="#ffcab1">
+<title>シナモンロールと筋トレ 💕</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
-    font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
-    background: linear-gradient(135deg, #ffe5d9 0%, #ffcab1 100%);
+    font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: linear-gradient(135deg, #ffe5d9 0%, #ffd6e7 50%, #ffcab1 100%);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
+    padding: 16px 12px 32px;
     color: #5a3a1f;
+    overflow-x: hidden;
   }
   h1 {
-    font-size: 28px;
-    margin-bottom: 12px;
+    font-size: 26px;
+    margin-bottom: 4px;
     text-shadow: 2px 2px 0 #fff;
+    text-align: center;
   }
-  .subtitle { font-size: 14px; margin-bottom: 20px; opacity: 0.7; }
+  .subtitle { font-size: 13px; margin-bottom: 12px; opacity: 0.85; text-align: center; }
+  .subtitle b { color: #d2691e; }
 
+  /* love note from boyfriend */
+  .love-note {
+    width: 100%;
+    max-width: 360px;
+    background: linear-gradient(135deg, #fff 0%, #fff0f5 100%);
+    border: 2px dashed #ff9bb3;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #8b4513;
+    text-align: center;
+    line-height: 1.5;
+    box-shadow: 0 4px 12px rgba(255, 155, 179, 0.15);
+  }
+  .love-note .from { display:block; font-size: 11px; opacity: 0.7; margin-top: 4px; }
+  .love-note.hidden { display: none; }
+
+  /* ===== modal ===== */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(90, 50, 30, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: linear-gradient(180deg, #fff 0%, #fff5ee 100%);
+    border-radius: 24px;
+    padding: 22px 20px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    text-align: center;
+  }
+  .modal h2 { font-size: 19px; margin-bottom: 4px; color: #d2691e; }
+  .modal p.note { font-size: 12px; opacity: 0.75; margin-bottom: 16px; line-height: 1.5; }
+  .input-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; text-align: left; }
+  .input-row label { font-size: 12px; font-weight: bold; color: #8b4513; }
+  .input-row input, .input-row textarea {
+    padding: 11px 13px;
+    border-radius: 12px;
+    border: 2px solid #ffb988;
+    font-size: 14px;
+    font-family: inherit;
+    color: #5a3a1f;
+    background: #fff;
+    outline: none;
+    width: 100%;
+    resize: none;
+  }
+  .input-row input:focus, .input-row textarea:focus { border-color: #d2691e; }
+
+  /* ===== stage ===== */
   .stage {
-    width: 320px;
+    width: 100%;
+    max-width: 360px;
     height: 280px;
     background: linear-gradient(180deg, #fff7f0 0%, #ffe0c7 100%);
     border-radius: 24px;
@@ -32,7 +95,7 @@
     box-shadow: 0 10px 30px rgba(180, 100, 50, 0.2);
     position: relative;
     overflow: hidden;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .ground {
     position: absolute;
@@ -46,168 +109,256 @@
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    width: 140px;
-    height: 140px;
-    transition: transform 0.3s ease;
+    width: 150px;
+    height: 150px;
   }
   .roll svg { width: 100%; height: 100%; display: block; }
-
-  /* squat: scale down */
-  .roll.squat { animation: squat 1.2s ease-in-out infinite; }
-  @keyframes squat {
-    0%, 100% { transform: translateX(-50%) scaleY(1); }
-    50% { transform: translateX(-50%) scaleY(0.65) translateY(20px); }
+  .roll-anim {
+    width: 100%; height: 100%;
+    transform-origin: bottom center;
   }
-  /* pushup: tilt forward */
-  .roll.pushup { animation: pushup 1.2s ease-in-out infinite; transform-origin: bottom center; }
-  @keyframes pushup {
-    0%, 100% { transform: translateX(-50%) rotate(-8deg); }
-    50% { transform: translateX(-50%) rotate(-8deg) translateY(15px) scaleY(0.9); }
-  }
-  /* plank: lay flat */
-  .roll.plank { transform: translateX(-50%) rotate(-90deg) translateY(-20px); animation: plankShake 0.4s ease-in-out infinite; }
-  @keyframes plankShake {
-    0%, 100% { transform: translateX(-50%) rotate(-90deg) translateY(-20px); }
-    50% { transform: translateX(-50%) rotate(-88deg) translateY(-19px); }
-  }
-  /* burpee: jump */
-  .roll.burpee { animation: burpee 0.9s ease-in-out infinite; }
-  @keyframes burpee {
-    0%, 100% { transform: translateX(-50%) translateY(0) scaleY(1); }
-    25% { transform: translateX(-50%) translateY(20px) scaleY(0.6); }
-    50% { transform: translateX(-50%) translateY(-40px) scaleY(1.1); }
-    75% { transform: translateX(-50%) translateY(20px) scaleY(0.6); }
-  }
-  /* idle */
-  .roll.idle { animation: idle 2.5s ease-in-out infinite; }
+  .roll[data-anim="idle"] .roll-anim { animation: idle 2.5s ease-in-out infinite; }
   @keyframes idle {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-6px); }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+  .roll[data-anim="squat"] .roll-anim { animation: squat 1.2s ease-in-out infinite; }
+  @keyframes squat {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.65) translateY(22px); }
+  }
+  .roll[data-anim="pushup"] .roll-anim { animation: pushup 1.2s ease-in-out infinite; }
+  @keyframes pushup {
+    0%, 100% { transform: rotate(-8deg); }
+    50% { transform: rotate(-8deg) translateY(15px) scaleY(0.9); }
+  }
+  .roll[data-anim="plank"] .roll-anim { animation: plankShake 0.4s ease-in-out infinite; transform-origin: center; }
+  @keyframes plankShake {
+    0%, 100% { transform: rotate(-90deg) translateY(-15px); }
+    50% { transform: rotate(-88deg) translateY(-14px); }
+  }
+  .roll[data-anim="burpee"] .roll-anim { animation: burpee 0.9s ease-in-out infinite; }
+  @keyframes burpee {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    25% { transform: translateY(20px) scaleY(0.6); }
+    50% { transform: translateY(-45px) scaleY(1.1); }
+    75% { transform: translateY(20px) scaleY(0.6); }
   }
 
   .speech {
     position: absolute;
-    top: 16px; left: 16px;
+    top: 18px;
+    left: 18px;
     background: #fff;
-    padding: 10px 14px;
-    border-radius: 16px;
+    padding: 9px 13px;
+    border-radius: 14px;
     font-size: 13px;
     font-weight: bold;
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    max-width: 60%;
+    max-width: 65%;
     opacity: 0;
     transition: opacity 0.4s;
+    z-index: 5;
+    color: #5a3a1f;
   }
   .speech.show { opacity: 1; }
   .speech::after {
     content: '';
     position: absolute;
-    bottom: -8px; left: 24px;
+    bottom: -8px; left: 22px;
     width: 0; height: 0;
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
     border-top: 10px solid #fff;
   }
 
+  /* hearts */
+  .hearts { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .heart {
+    position: absolute;
+    bottom: 30px;
+    font-size: 22px;
+    opacity: 0;
+    animation: floatHeart 2.4s ease-out forwards;
+  }
+  @keyframes floatHeart {
+    0% { opacity: 0; transform: translateY(0) scale(0.6) rotate(-10deg); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-260px) scale(1.3) rotate(20deg); }
+  }
+
+  /* ===== counter ===== */
+  .counter-label { font-size: 13px; opacity: 0.75; margin-bottom: 2px; min-height: 18px; text-align:center; }
   .counter {
-    font-size: 56px;
+    font-size: 54px;
     font-weight: 900;
     color: #d2691e;
     text-shadow: 3px 3px 0 #fff;
-    margin: 8px 0;
-    min-height: 70px;
+    margin: 2px 0 8px;
+    min-height: 62px;
     line-height: 1;
+    letter-spacing: 1px;
+    text-align: center;
   }
-  .counter-label { font-size: 14px; opacity: 0.7; margin-bottom: 10px; }
 
+  /* ===== controls ===== */
   .controls {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    width: 320px;
-    margin-bottom: 14px;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 10px;
   }
   .menu-btn {
     background: #fff;
     border: 3px solid #ffb988;
-    border-radius: 16px;
-    padding: 14px 8px;
-    font-size: 15px;
+    border-radius: 14px;
+    padding: 12px 6px;
+    font-size: 14px;
     font-weight: bold;
     color: #8b4513;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
     font-family: inherit;
   }
-  .menu-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .menu-btn:active { transform: translateY(1px); }
   .menu-btn.active {
     background: #d2691e;
     color: #fff;
     border-color: #d2691e;
+    box-shadow: 0 4px 12px rgba(210, 105, 30, 0.35);
   }
 
   .action-row {
     display: flex;
-    gap: 10px;
-    width: 320px;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 14px;
   }
   .action-btn {
     flex: 1;
     padding: 14px;
-    border-radius: 16px;
+    border-radius: 14px;
     border: none;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
     font-family: inherit;
-    transition: all 0.15s;
+    transition: transform 0.12s, background 0.12s;
   }
+  .action-btn:active { transform: translateY(1px); }
   .start-btn { background: #d2691e; color: #fff; }
-  .start-btn:hover { background: #b8590f; }
-  .start-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .start-btn:disabled { background: #ddd; color: #999; cursor: not-allowed; }
   .stop-btn { background: #fff; color: #d2691e; border: 3px solid #d2691e; }
 
-  .stats {
-    margin-top: 16px;
-    font-size: 13px;
+  .stats-card {
+    width: 100%;
+    max-width: 360px;
     background: #fff;
-    padding: 8px 16px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 10px;
   }
+  .stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+  .stats-row + .stats-row { margin-top: 6px; }
+  .stats-row b { color: #d2691e; font-size: 15px; }
+  .streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(90deg, #ff9bb3, #ffb988);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: bold;
+    font-size: 12px;
+  }
+
+  .footer-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .text-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.7);
+    border: 2px dashed #d2691e;
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #8b4513;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .text-btn:active { background: #fff; }
+  .text-btn.hidden { display: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #5a3a1f;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: bold;
+    opacity: 0;
+    transition: transform 0.35s, opacity 0.35s;
+    z-index: 200;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    max-width: 88vw;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
-  <h1>シナモンロールと筋トレ</h1>
-  <p class="subtitle">一緒にがんばろう！</p>
+  <h1>シナモンロールと筋トレ 💕</h1>
+  <p class="subtitle" id="subtitle">いっしょにがんばろう！</p>
+
+  <div class="love-note hidden" id="loveNote">
+    <span id="loveText"></span>
+    <span class="from" id="loveFrom"></span>
+  </div>
 
   <div class="stage">
     <div class="speech" id="speech">いっしょにやろ〜！</div>
-    <div class="roll idle" id="roll">
-      <svg viewBox="0 0 100 100">
-        <!-- shadow -->
-        <ellipse cx="50" cy="92" rx="32" ry="4" fill="rgba(0,0,0,0.15)"/>
-        <!-- main roll body -->
-        <circle cx="50" cy="55" r="38" fill="#e8b88a" stroke="#a87042" stroke-width="2"/>
-        <!-- spiral -->
-        <path d="M 50 55 m -28 0 a 28 28 0 1 1 56 0 a 22 22 0 1 0 -44 0 a 16 16 0 1 1 32 0 a 10 10 0 1 0 -20 0 a 4 4 0 1 1 8 0"
-              fill="none" stroke="#a87042" stroke-width="3" stroke-linecap="round"/>
-        <!-- icing drip -->
-        <path d="M 22 50 Q 28 60 24 68 Q 36 64 40 72 Q 50 66 56 74 Q 66 64 72 70 Q 78 60 78 50 Z"
-              fill="#fff8f0" opacity="0.85"/>
-        <!-- eyes -->
-        <ellipse cx="40" cy="52" rx="3" ry="4" fill="#3a2418"/>
-        <ellipse cx="60" cy="52" rx="3" ry="4" fill="#3a2418"/>
-        <circle cx="41" cy="50.5" r="1" fill="#fff"/>
-        <circle cx="61" cy="50.5" r="1" fill="#fff"/>
-        <!-- cheeks -->
-        <circle cx="33" cy="60" r="3.5" fill="#ff9a8b" opacity="0.6"/>
-        <circle cx="67" cy="60" r="3.5" fill="#ff9a8b" opacity="0.6"/>
-        <!-- mouth -->
-        <path d="M 45 62 Q 50 66 55 62" fill="none" stroke="#3a2418" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+    <div class="roll" id="roll" data-anim="idle">
+      <div class="roll-anim">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <ellipse cx="50" cy="92" rx="32" ry="4" fill="rgba(0,0,0,0.15)"/>
+          <circle cx="50" cy="55" r="38" fill="#e8b88a" stroke="#a87042" stroke-width="2"/>
+          <path d="M 50 55 m -28 0 a 28 28 0 1 1 56 0 a 22 22 0 1 0 -44 0 a 16 16 0 1 1 32 0 a 10 10 0 1 0 -20 0 a 4 4 0 1 1 8 0"
+                fill="none" stroke="#a87042" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 22 50 Q 28 60 24 68 Q 36 64 40 72 Q 50 66 56 74 Q 66 64 72 70 Q 78 60 78 50 Z"
+                fill="#fff8f0" opacity="0.85"/>
+          <!-- ribbon -->
+          <path d="M 28 28 Q 32 20 38 26 Q 34 30 30 34 Z" fill="#ff9bb3"/>
+          <path d="M 38 26 Q 36 30 32 34 Q 38 32 42 30 Z" fill="#ff7a9b"/>
+          <ellipse cx="40" cy="52" rx="3" ry="4" fill="#3a2418"/>
+          <ellipse cx="60" cy="52" rx="3" ry="4" fill="#3a2418"/>
+          <circle cx="41" cy="50.5" r="1" fill="#fff"/>
+          <circle cx="61" cy="50.5" r="1" fill="#fff"/>
+          <circle cx="33" cy="60" r="3.5" fill="#ff9a8b" opacity="0.6"/>
+          <circle cx="67" cy="60" r="3.5" fill="#ff9a8b" opacity="0.6"/>
+          <path d="M 45 62 Q 50 66 55 62" fill="none" stroke="#3a2418" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
     </div>
     <div class="ground"></div>
+    <div class="hearts" id="hearts"></div>
   </div>
 
   <div class="counter-label" id="counterLabel">メニューをえらんでね</div>
@@ -225,30 +376,143 @@
     <button class="action-btn stop-btn" id="resetBtn">リセット</button>
   </div>
 
-  <div class="stats" id="stats">今日の合計: 0回 / 0秒</div>
+  <div class="stats-card">
+    <div class="stats-row">
+      <span>連続記録</span>
+      <span class="streak">🔥 <span id="streak">0</span>日</span>
+    </div>
+    <div class="stats-row">
+      <span>今日の合計</span>
+      <span><b id="todayReps">0</b>回 / <b id="todaySec">0</b>秒</span>
+    </div>
+    <div class="stats-row">
+      <span>これまでの合計</span>
+      <span><b id="totalReps">0</b>回 / <b id="totalSec">0</b>秒</span>
+    </div>
+  </div>
+
+  <div class="footer-row">
+    <button class="text-btn" id="setupBtn">✏️ メッセージを編集</button>
+    <button class="text-btn" id="shareBtn">💌 リンクを送る</button>
+  </div>
+
+  <!-- setup modal: for the boyfriend to configure before sending -->
+  <div class="modal-bg" id="modal">
+    <div class="modal">
+      <h2 id="modalTitle">彼女に送る準備 💌</h2>
+      <p class="note" id="modalNote">名前と応援メッセージを入れて、共有リンクを彼女に送ってね</p>
+      <div class="input-row">
+        <label>🥐 彼女の名前</label>
+        <input id="inputHer" type="text" placeholder="ななちゃん" maxlength="14">
+        <label>💕 自分の名前（応援する人）</label>
+        <input id="inputMe" type="text" placeholder="あなた" maxlength="14">
+        <label>📝 応援メッセージ（任意）</label>
+        <textarea id="inputMsg" rows="3" placeholder="きょうもがんばってね！むりしないでね💗" maxlength="80"></textarea>
+      </div>
+      <button class="action-btn start-btn" id="saveBtn" style="width:100%">けってい！</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
 <script>
-  const roll = document.getElementById('roll');
-  const speech = document.getElementById('speech');
-  const counter = document.getElementById('counter');
-  const counterLabel = document.getElementById('counterLabel');
-  const startBtn = document.getElementById('startBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const stats = document.getElementById('stats');
+  const $ = (id) => document.getElementById(id);
+  const roll = $('roll');
+  const speech = $('speech');
+  const counter = $('counter');
+  const counterLabel = $('counterLabel');
+  const startBtn = $('startBtn');
+  const resetBtn = $('resetBtn');
   const menuBtns = document.querySelectorAll('.menu-btn');
+  const heartsLayer = $('hearts');
+  const toast = $('toast');
+  const subtitle = $('subtitle');
+  const loveNote = $('loveNote');
+  const loveText = $('loveText');
+  const loveFrom = $('loveFrom');
 
+  const STORE_KEY = 'cinnamon-her-v1';
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      const s = raw ? JSON.parse(raw) : {};
+      return {
+        her: s.her || '',
+        me: s.me || '',
+        msg: s.msg || '',
+        streak: s.streak || 0,
+        lastDate: s.lastDate || '',
+        today: s.today || { date: '', reps: 0, sec: 0 },
+        total: s.total || { reps: 0, sec: 0 }
+      };
+    } catch {
+      return { her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0} };
+    }
+  }
+  const state = loadState();
+  function saveState() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function yesterdayStr() {
+    const d = new Date(); d.setDate(d.getDate()-1);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  // hydrate from URL — boyfriend sends a configured link
+  (function fromUrl() {
+    const u = new URL(location.href);
+    const her = u.searchParams.get('her');
+    const me  = u.searchParams.get('me');
+    const msg = u.searchParams.get('msg');
+    let touched = false;
+    if (her) { state.her = decodeURIComponent(her).slice(0,14); touched = true; }
+    if (me)  { state.me  = decodeURIComponent(me).slice(0,14);  touched = true; }
+    if (msg) { state.msg = decodeURIComponent(msg).slice(0,80); touched = true; }
+    if (touched) saveState();
+  })();
+
+  // reset today's totals if it's a new day
+  if (state.today.date !== todayStr()) {
+    state.today = { date: todayStr(), reps: 0, sec: 0 };
+    saveState();
+  }
+
+  function applyNames() {
+    const her = state.her || 'きみ';
+    subtitle.innerHTML = '<b>' + escapeHtml(her) + '</b>、いっしょにがんばろう！';
+    document.title = her + 'の筋トレ 🥐💕';
+
+    if (state.msg) {
+      loveText.textContent = '「' + state.msg + '」';
+      loveFrom.textContent = state.me ? '— ' + state.me + ' より' : '';
+      loveNote.classList.remove('hidden');
+    } else {
+      loveNote.classList.add('hidden');
+    }
+  }
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function refreshStats() {
+    $('streak').textContent = state.streak;
+    $('todayReps').textContent = state.today.reps;
+    $('todaySec').textContent = state.today.sec;
+    $('totalReps').textContent = state.total.reps;
+    $('totalSec').textContent = state.total.sec;
+  }
+
+  // ===== speech (named cheers) =====
+  function n() { return state.her || 'きみ'; }
   const cheers = {
-    start: ['いくよ〜！', 'ファイト！', 'いっしょにがんばろ！', 'よーい、スタート！'],
-    mid: ['その調子！', 'いいぞ〜', 'もうちょい！', 'がんばれ〜', 'ナイスっ！'],
-    end: ['やったね！', 'おつかれさま〜', 'かんぺき！', 'えらい！えらい！']
+    start: () => [`${n()}、いくよ〜！`, `ファイト〜${n()}！`, `${n()}、よーいスタート！`, `いっしょにがんばろ、${n()}♡`],
+    mid:   () => [`${n()}、その調子！`, `いいぞ〜${n()}！`, `あとちょっと${n()}！`, `${n()}えらい！`, `ナイス${n()}っ！`],
+    end:   () => [`${n()}、おつかれさま♡`, `${n()}、かんぺき！`, `えら〜い！${n()}！`, `${n()}、だいすき♡`, `やったね${n()}！`],
+    idleHi:() => [`${n()}、きょうもえらいね♡`, `${n()}、来てくれてありがとう！`, `${n()}、なにする？`, `${n()}、いっしょにやろ〜`]
   };
-
-  let selected = null;
-  let running = false;
-  let count = 0;
-  let timerId = null;
-  let totalReps = 0;
-  let totalSec = 0;
+  const pick = (a) => a[Math.floor(Math.random()*a.length)];
 
   function showSpeech(text, dur = 1800) {
     speech.textContent = text;
@@ -256,11 +520,34 @@
     clearTimeout(showSpeech._t);
     showSpeech._t = setTimeout(() => speech.classList.remove('show'), dur);
   }
-  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function setAnim(name) { roll.dataset.anim = name; }
 
-  function setAnimation(name) {
-    roll.className = 'roll ' + name;
+  function spawnHearts(n = 16) {
+    for (let i=0; i<n; i++) {
+      const h = document.createElement('div');
+      h.className = 'heart';
+      h.textContent = ['💗','💖','💕','✨','🥰','🎉'][Math.floor(Math.random()*6)];
+      h.style.left = (10 + Math.random()*80) + '%';
+      h.style.fontSize = (16 + Math.random()*16) + 'px';
+      h.style.animationDuration = (1.8 + Math.random()*1.2) + 's';
+      h.style.animationDelay = (Math.random()*0.4) + 's';
+      heartsLayer.appendChild(h);
+      setTimeout(() => h.remove(), 3200);
+    }
   }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  // ===== workout =====
+  let selected = null;
+  let running = false;
+  let count = 0;
+  let timerId = null;
 
   menuBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -276,36 +563,51 @@
       counterLabel.textContent = selected.label + ' 準備OK';
       counter.textContent = selected.mode === 'time' ? selected.target + '秒' : '0 / ' + selected.target;
       startBtn.disabled = false;
-      setAnimation(selected.key);
-      showSpeech('やる気まんまん！', 1500);
+      setAnim(selected.key);
+      showSpeech(`${n()}、やる気まんまん！`, 1500);
     });
   });
+
+  function recordSession() {
+    if (!selected) return;
+    if (selected.mode === 'reps') {
+      state.today.reps += selected.target;
+      state.total.reps += selected.target;
+    } else {
+      state.today.sec += selected.target;
+      state.total.sec += selected.target;
+    }
+    const t = todayStr();
+    if (state.lastDate !== t) {
+      state.streak = (state.lastDate === yesterdayStr()) ? state.streak + 1 : 1;
+      state.lastDate = t;
+    }
+    saveState();
+    refreshStats();
+  }
 
   function finish(success) {
     running = false;
     clearInterval(timerId);
     timerId = null;
-    setAnimation('idle');
+    setAnim('idle');
     startBtn.textContent = 'スタート';
     if (success) {
-      showSpeech(pick(cheers.end), 2500);
-      if (selected.mode === 'reps') totalReps += selected.target;
-      else totalSec += selected.target;
-      stats.textContent = `今日の合計: ${totalReps}回 / ${totalSec}秒`;
+      showSpeech(pick(cheers.end()), 2600);
+      spawnHearts(22);
+      recordSession();
+      counterLabel.textContent = `${n()}、おつかれさま♡`;
     }
   }
 
   startBtn.addEventListener('click', () => {
     if (!selected) return;
-    if (running) {
-      finish(false);
-      return;
-    }
+    if (running) { finish(false); return; }
     running = true;
     count = 0;
     startBtn.textContent = 'やめる';
-    setAnimation(selected.key);
-    showSpeech(pick(cheers.start), 1500);
+    setAnim(selected.key);
+    showSpeech(pick(cheers.start()), 1500);
 
     if (selected.mode === 'reps') {
       const interval = selected.key === 'burpee' ? 900 : 1200;
@@ -313,7 +615,7 @@
       timerId = setInterval(() => {
         count++;
         counter.textContent = count + ' / ' + selected.target;
-        if (count === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid), 1400);
+        if (count === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid()), 1400);
         if (count >= selected.target) finish(true);
       }, interval);
     } else {
@@ -322,7 +624,7 @@
       timerId = setInterval(() => {
         remain--;
         counter.textContent = remain + '秒';
-        if (remain === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid), 1400);
+        if (remain === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid()), 1400);
         if (remain <= 0) finish(true);
       }, 1000);
     }
@@ -335,11 +637,74 @@
     counterLabel.textContent = 'メニューをえらんでね';
     counter.textContent = '--';
     startBtn.disabled = true;
-    setAnimation('idle');
-    showSpeech('またやろうね〜', 1500);
+    setAnim('idle');
+    showSpeech(`${n()}、またね〜`, 1500);
   });
 
-  setTimeout(() => showSpeech('いっしょにやろ〜！', 2500), 400);
+  // ===== setup modal & share =====
+  const modal = $('modal');
+  const inputHer = $('inputHer');
+  const inputMe  = $('inputMe');
+  const inputMsg = $('inputMsg');
+
+  $('saveBtn').addEventListener('click', () => {
+    const her = (inputHer.value || '').trim().slice(0, 14);
+    const me  = (inputMe.value  || '').trim().slice(0, 14);
+    const msg = (inputMsg.value || '').trim().slice(0, 80);
+    if (!her) { showToast('彼女の名前を入れてね💦'); inputHer.focus(); return; }
+    state.her = her;
+    state.me  = me;
+    state.msg = msg;
+    saveState();
+    applyNames();
+    modal.classList.remove('show');
+    showSpeech(`${her}、よろしくね♡`, 2000);
+  });
+
+  $('setupBtn').addEventListener('click', () => {
+    inputHer.value = state.her;
+    inputMe.value  = state.me;
+    inputMsg.value = state.msg;
+    modal.classList.add('show');
+    setTimeout(() => inputHer.focus(), 100);
+  });
+
+  $('shareBtn').addEventListener('click', async () => {
+    if (!state.her) { showToast('まず名前を入れてね💦'); $('setupBtn').click(); return; }
+    const url = new URL(location.href);
+    url.search = ''; // reset
+    url.searchParams.set('her', state.her);
+    if (state.me)  url.searchParams.set('me',  state.me);
+    if (state.msg) url.searchParams.set('msg', state.msg);
+    const link = url.toString();
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${state.her}のシナモンロール筋トレ💕`,
+          text: state.msg || 'いっしょにがんばろうね♡',
+          url: link
+        });
+      } else {
+        await navigator.clipboard.writeText(link);
+        showToast('リンクをコピーしたよ💌 LINEとかで送ってね');
+      }
+    } catch {
+      window.prompt('このリンクを彼女に送ってね💌', link);
+    }
+  });
+
+  // ===== boot =====
+  applyNames();
+  refreshStats();
+
+  // Decide first-run UX:
+  // - If URL had params (her is set), it's the girlfriend opening the link → just greet her.
+  // - If no name yet at all → show modal so the boyfriend can set it up before sending.
+  if (!state.her) {
+    setTimeout(() => modal.classList.add('show'), 200);
+  } else {
+    setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
+  }
 </script>
 </body>
 </html>
