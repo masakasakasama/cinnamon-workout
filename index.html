@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v13">
+<html lang="ja" data-app-version="v14">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -772,18 +772,19 @@
 
   <div class="toast" id="toast"></div>
   <div id="diag" style="margin-top:14px; font-size:11px; opacity:0.8; text-align:center; line-height:1.6; color:#5a3a1f; padding: 0 12px;">
-    <div>v13 — タイムアウト+エラー検出</div>
+    <div>v14 — long-polling強制</div>
     <div id="diagStatus">🟡 接続中…</div>
     <div>📡 coupleId: <code id="diagId" style="background:#fff; padding:2px 6px; border-radius:4px; word-break:break-all; display:inline-block; max-width:100%;">-</code></div>
     <div>🔄 最終受信: <span id="diagLast">-</span></div>
     <div>📝 最終書込: <span id="diagWrite">-</span></div>
     <div id="diagError" style="color:#c8364b; margin-top:4px; word-break:break-word;"></div>
     <button id="diagForceSync" style="margin-top:8px; background:#5cb6e8; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔄 手動同期</button>
+    <button id="diagReconnect" style="margin-top:8px; margin-left:6px; background:#ffb988; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔌 再接続</button>
   </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import { initializeFirestore, doc, setDoc, getDoc, onSnapshot, increment, arrayUnion, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
@@ -794,7 +795,11 @@
     appId: "1:587980763699:web:ca9f711928b463a9d8a946"
   };
   const fbApp = initializeApp(firebaseConfig);
-  const db = getFirestore(fbApp);
+  // モバイル網で gRPC が繋がらない問題対策で long-polling 強制
+  const db = initializeFirestore(fbApp, {
+    experimentalForceLongPolling: true,
+    useFetchStreams: false
+  });
 
   // 固定の coupleId — このアプリは1組のカップル専用なので、URL分岐なしで常に同じドキュメントを使う
   const COUPLE_ID = 'masakasakasama-cinnamoroll-couple-2026';
@@ -941,7 +946,13 @@
     } catch (e) {
       console.warn('fallback sync failed', e);
       $('diagStatus').textContent = '🔴 接続失敗';
-      $('diagError').textContent = 'fallback失敗: ' + (e.code || e.message);
+      let hint = '';
+      if (e.code === 'unavailable' || e.message?.includes('timeout')) {
+        hint = '<br>👉 Firebaseコンソールで Firestore Database が作成済みか確認 / APIキーの制限を外す';
+      } else if (e.code === 'permission-denied') {
+        hint = '<br>👉 Firestoreのルール: <code>allow read, write: if coupleId.size() >= 24;</code>';
+      }
+      $('diagError').innerHTML = 'fallback失敗: ' + (e.code || e.message) + hint;
     }
   }
   // 全 JS エラーを診断パネルに見える化
@@ -1454,6 +1465,19 @@
     } catch (e) {
       showError('同期失敗: ' + (e.code || e.message));
       $('diagError').textContent = '手動同期失敗: ' + (e.code || e.message);
+    }
+  });
+  // 再接続ボタン (Firestore SDK のネットワークを切り直す)
+  $('diagReconnect').addEventListener('click', async () => {
+    try {
+      $('diagStatus').textContent = '🟡 再接続中…';
+      await disableNetwork(db);
+      await new Promise(r => setTimeout(r, 500));
+      await enableNetwork(db);
+      await fallbackSync();
+      showToast('再接続したよ');
+    } catch (e) {
+      showError('再接続失敗: ' + (e.code || e.message));
     }
   });
 
