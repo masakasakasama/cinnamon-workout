@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v17">
+<html lang="ja" data-app-version="v18">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -506,9 +506,13 @@
   .dash-daily { display: flex; flex-direction: column; gap: 10px; }
   .day-row {
     border-bottom: 1px dashed #cfe3f5;
-    padding-bottom: 9px;
+    padding: 8px 8px 9px;
+    border-radius: 10px;
+    transition: background 0.15s;
   }
-  .day-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .day-row.tappable { cursor: pointer; }
+  .day-row.tappable:active { background: rgba(255, 200, 220, 0.25); }
+  .day-row:last-child { border-bottom: none; padding-bottom: 8px; }
   .day-head {
     display: flex; justify-content: space-between; align-items: baseline;
     margin-bottom: 4px;
@@ -1623,13 +1627,28 @@
       .filter(k => (e[k] || 0) > 0)
       .map(k => {
         const cal = calForType(k, e[k]);
-        const sets = e[k+'_sets'];
-        const setsLabel = sets > 0 ? ` ${sets}セット` : '';
-        return `<span class="day-item">${EX_ICON[k]} ${EX_LABEL[k]} <b>${e[k]}${EX_UNIT[k]}</b>${setsLabel} <span class="kcal">${cal}kcal</span></span>`;
+        const total = e[k];
+        const sets = e[k+'_sets'] || 0;
+        const reps = e[k+'_reps'] || 0;
+        const u = EX_UNIT[k];
+        // セット×回数で割り切れる時は「2セット × 10回」表示にする
+        let body;
+        if (sets > 0 && reps > 0 && sets * reps === total) {
+          if (sets === 1) {
+            body = `<b>${reps}${u}</b>`;
+          } else {
+            body = `<b>${sets}セット × ${reps}${u}</b> <span style="opacity:0.7;">= ${total}${u}</span>`;
+          }
+        } else if (sets > 0) {
+          body = `<b>${total}${u}</b> <span style="opacity:0.7;">${sets}セット</span>`;
+        } else {
+          body = `<b>${total}${u}</b>`;
+        }
+        return `<span class="day-item">${EX_ICON[k]} ${EX_LABEL[k]} ${body} <span class="kcal">${cal}kcal</span></span>`;
       }).join('');
     const totalCal = calTotalForDay(e);
     return `
-      <div class="day-row" data-day="${day}">
+      <div class="day-row tappable" data-day="${day}" role="button">
         <div class="day-head">
           <span class="day-date">${formatDay(day)}</span>
           <span class="day-meta">${sessionN ? sessionN + 'セット ・ ' : ''}${totalCal.toFixed(1)} kcal</span>
@@ -1639,10 +1658,9 @@
       </div>`;
   }
   function attachDayEditButtons() {
-    document.querySelectorAll('.day-edit-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const day = btn.dataset.day;
-        openDayEdit(day);
+    document.querySelectorAll('.day-row.tappable').forEach(row => {
+      row.addEventListener('click', () => {
+        openDayEdit(row.dataset.day);
       });
     });
   }
