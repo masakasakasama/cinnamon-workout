@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v26">
+<html lang="ja" data-app-version="v27">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -187,6 +187,11 @@
   @keyframes situp {
     0%, 100% { transform: rotate(-30deg) translateY(8px); }
     50% { transform: rotate(10deg) translateY(-4px); }
+  }
+  .roll[data-anim="aerobic"] .roll-anim { animation: aerobic 0.55s ease-in-out infinite; }
+  @keyframes aerobic {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-10px) rotate(4deg); }
   }
   .roll[data-anim="happy"] .roll-anim { animation: happy 0.6s ease-out; }
   @keyframes happy {
@@ -1089,6 +1094,7 @@
     <button class="menu-btn" data-key="situp" data-mode="reps">🤰 腹筋</button>
     <button class="menu-btn" data-key="burpee" data-mode="reps">🤸 バーピー</button>
     <button class="menu-btn" data-key="plank" data-mode="time">🧘 プランク</button>
+    <button class="menu-btn full" data-key="aerobic" data-mode="time">🏃 有酸素</button>
   </div>
 
   <div class="count-row hidden" id="countRow">
@@ -1278,13 +1284,13 @@
         recent: s.recent || [],
         byDay: s.byDay || {},
         speed: s.speed || 'normal',
-        targets: s.targets || { squat:10, situp:15, plank:30, burpee:10 },
+        targets: s.targets || { squat:10, situp:15, plank:30, burpee:10, aerobic:10 },
         soundOn: s.soundOn !== false,
         pendingSessions: s.pendingSessions || [],
         character: s.character || 'cinnamon'
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,situp:15,plank:30,burpee:10}, soundOn:true, pendingSessions:[], character:'cinnamon' };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,situp:15,plank:30,burpee:10,aerobic:10}, soundOn:true, pendingSessions:[], character:'cinnamon' };
     }
   }
   const state = loadState();
@@ -1666,7 +1672,8 @@
     squat:  [5, 10, 15, 20],
     situp:  [5, 10, 15, 20],
     burpee: [5, 10, 15, 20],
-    plank:  [15, 30, 45, 60]
+    plank:  [15, 30, 45, 60],
+    aerobic:[5, 10, 15, 20, 25, 30] // 分
   };
   function refreshCountUI() {
     if (!selected) {
@@ -1696,7 +1703,12 @@
     $('countCustom').value = presets.includes(cur) ? '' : cur;
     $('countCustomUnit').textContent = unit;
     counterLabel.textContent = `${EX_ICON[selected.key]} ${EX_LABEL[selected.key]} ${cur}${unit} 準備OK`;
-    counter.textContent = selected.mode === 'time' ? cur + '秒' : '0 / ' + cur;
+    if (selected.mode === 'time') {
+      if (selected.key === 'aerobic') counter.textContent = cur + ':00';
+      else counter.textContent = cur + '秒';
+    } else {
+      counter.textContent = '0 / ' + cur;
+    }
   }
   $('countCustom').addEventListener('change', () => {
     if (running || !selected) return;
@@ -1857,13 +1869,19 @@
         if (count >= selected.target) finish(true);
       }, interval);
     } else {
-      let remain = selected.target;
-      counter.textContent = remain + '秒';
+      // 時間モード: プランクは秒、有酸素は分指定→秒換算で mm:ss 表示
+      const isAerobic = selected.key === 'aerobic';
+      const totalSec = isAerobic ? selected.target * 60 : selected.target;
+      let remain = totalSec;
+      const fmt = (s) => isAerobic ? Math.floor(s/60) + ':' + String(s%60).padStart(2,'0') : (s + '秒');
+      counter.textContent = fmt(remain);
       timerId = setInterval(() => {
         remain--;
-        counter.textContent = remain + '秒';
+        counter.textContent = fmt(remain);
+        // 有酸素は分の節目でディン、最後の3秒カウントダウン
+        if (isAerobic && remain > 0 && remain % 60 === 0) midCheer();
         if (remain > 0 && remain <= 3) countdownBeep(remain);
-        if (remain === Math.floor(selected.target / 2)) {
+        if (remain === Math.floor(totalSec / 2)) {
           showSpeech(pick(cheers.mid()), 1400);
           midCheer();
         }
@@ -2034,12 +2052,12 @@
     if (hr < 24) return hr + '時間前';
     return Math.floor(hr / 24) + '日前';
   }
-  const EX_LABEL = { squat: 'スクワット', situp: '腹筋', plank: 'プランク', burpee: 'バーピー' };
-  const EX_ICON  = { squat: '🦵', situp: '🤰', plank: '🧘', burpee: '🤸' };
-  const EX_UNIT  = { squat: '回', situp: '回', plank: '秒', burpee: '回' };
-  const EX_ORDER = ['squat', 'situp', 'burpee', 'plank'];
-  // 推定消費カロリー (kcal per rep/sec, 体重50kg目安)
-  const CAL_PER = { squat: 0.32, situp: 0.27, burpee: 1.43, plank: 0.05 };
+  const EX_LABEL = { squat: 'スクワット', situp: '腹筋', plank: 'プランク', burpee: 'バーピー', aerobic: '有酸素' };
+  const EX_ICON  = { squat: '🦵', situp: '🤰', plank: '🧘', burpee: '🤸', aerobic: '🏃' };
+  const EX_UNIT  = { squat: '回', situp: '回', plank: '秒', burpee: '回', aerobic: '分' };
+  const EX_ORDER = ['squat', 'situp', 'burpee', 'plank', 'aerobic'];
+  // 推定消費カロリー (kcal per 単位, 体重50kg目安)
+  const CAL_PER = { squat: 0.32, situp: 0.27, burpee: 1.43, plank: 0.05, aerobic: 6 };
   function calForType(type, value) {
     return Math.round((CAL_PER[type] || 0) * value * 10) / 10;
   }
