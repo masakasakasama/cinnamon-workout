@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v27">
+<html lang="ja" data-app-version="v28">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -432,6 +432,13 @@
     box-shadow: 0 4px 0 rgba(255, 155, 179, 0.3);
   }
   .stop-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(255, 155, 179, 0.3); }
+  .save-partial-btn {
+    background: linear-gradient(180deg, #b8e0c8, #8ed1a8);
+    color: #fff;
+    box-shadow: 0 4px 0 rgba(120, 180, 140, 0.4);
+    width: 100%;
+  }
+  .save-partial-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(120, 180, 140, 0.4); }
 
   .stats-card {
     width: 100%;
@@ -1114,6 +1121,9 @@
     <button class="action-btn start-btn" id="startBtn" disabled>スタート</button>
     <button class="action-btn stop-btn" id="resetBtn">リセット</button>
   </div>
+  <div class="action-row" id="partialRow" style="display:none;">
+    <button class="action-btn save-partial-btn" id="partialBtn">💾 ここまで登録</button>
+  </div>
 
   <div class="stats-card">
     <div class="stats-row">
@@ -1663,7 +1673,10 @@
   // ===== workout =====
   let selected = null;
   let running = false;
+  let paused = false;
   let count = 0;
+  let remain = 0;
+  let totalSec = 0;
   let timerId = null;
 
   const speedRow = $('speedRow');
@@ -1828,11 +1841,17 @@
 
   function finish(success) {
     running = false;
+    paused = false;
     clearInterval(timerId);
     timerId = null;
     setAnim('idle');
-    if (rollAnimEl) rollAnimEl.style.animationDuration = '';
+    if (rollAnimEl) {
+      rollAnimEl.style.animationDuration = '';
+      rollAnimEl.style.animationPlayState = '';
+    }
     startBtn.textContent = 'スタート';
+    const pr = $('partialRow');
+    if (pr) pr.style.display = 'none';
     if (success) {
       showSpeech(pick(cheers.end()), 2600);
       spawnHearts(22);
@@ -1843,25 +1862,15 @@
   }
 
   const rollAnimEl = document.querySelector('.roll-anim');
-  startBtn.addEventListener('click', () => {
-    if (!selected) return;
-    if (running) { finish(false); return; }
-    running = true;
-    count = 0;
-    startBtn.textContent = 'やめる';
-    setAnim(selected.key);
-    showSpeech(pick(cheers.start()), 1500);
-
-    ensureAudio();
+  function startTimer() {
     if (selected.mode === 'reps') {
       const base = selected.key === 'burpee' ? 1300 : 1600;
       const interval = Math.round(base * (SPEED_MULT[state.speed] || 1));
       rollAnimEl.style.animationDuration = interval + 'ms';
-      counter.textContent = '0 / ' + selected.target;
       timerId = setInterval(() => {
         count++;
         counter.textContent = count + ' / ' + selected.target;
-        tick(count); // スケール上のノートを順に鳴らす
+        tick(count);
         if (count === Math.floor(selected.target / 2)) {
           showSpeech(pick(cheers.mid()), 1400);
           midCheer();
@@ -1869,16 +1878,11 @@
         if (count >= selected.target) finish(true);
       }, interval);
     } else {
-      // 時間モード: プランクは秒、有酸素は分指定→秒換算で mm:ss 表示
       const isAerobic = selected.key === 'aerobic';
-      const totalSec = isAerobic ? selected.target * 60 : selected.target;
-      let remain = totalSec;
       const fmt = (s) => isAerobic ? Math.floor(s/60) + ':' + String(s%60).padStart(2,'0') : (s + '秒');
-      counter.textContent = fmt(remain);
       timerId = setInterval(() => {
         remain--;
         counter.textContent = fmt(remain);
-        // 有酸素は分の節目でディン、最後の3秒カウントダウン
         if (isAerobic && remain > 0 && remain % 60 === 0) midCheer();
         if (remain > 0 && remain <= 3) countdownBeep(remain);
         if (remain === Math.floor(totalSec / 2)) {
@@ -1888,6 +1892,63 @@
         if (remain <= 0) finish(true);
       }, 1000);
     }
+  }
+  function pauseWorkout() {
+    paused = true;
+    clearInterval(timerId);
+    timerId = null;
+    rollAnimEl.style.animationPlayState = 'paused';
+    startBtn.textContent = '▶️ 再開';
+    showSpeech('ちょっと休憩〜♡', 1500);
+  }
+  function resumeWorkout() {
+    paused = false;
+    rollAnimEl.style.animationPlayState = '';
+    startBtn.textContent = '⏸️ 一時停止';
+    showSpeech('再開〜！', 1200);
+    startTimer();
+  }
+  startBtn.addEventListener('click', () => {
+    if (!selected) return;
+    if (running && !paused) { pauseWorkout(); return; }
+    if (running && paused) { resumeWorkout(); return; }
+    // フレッシュスタート
+    running = true;
+    paused = false;
+    count = 0;
+    if (selected.mode === 'time') {
+      const isAerobic = selected.key === 'aerobic';
+      totalSec = isAerobic ? selected.target * 60 : selected.target;
+      remain = totalSec;
+      counter.textContent = isAerobic ? Math.floor(remain/60) + ':' + String(remain%60).padStart(2,'0') : remain + '秒';
+    } else {
+      counter.textContent = '0 / ' + selected.target;
+    }
+    startBtn.textContent = '⏸️ 一時停止';
+    $('partialRow').style.display = '';
+    setAnim(selected.key);
+    showSpeech(pick(cheers.start()), 1500);
+    ensureAudio();
+    startTimer();
+  });
+
+  // ここまで登録: 途中で止めた分を保存
+  $('partialBtn').addEventListener('click', () => {
+    if (!running) return;
+    let partial;
+    if (selected.mode === 'reps') {
+      partial = count;
+    } else {
+      const isAerobic = selected.key === 'aerobic';
+      const elapsed = totalSec - remain;
+      partial = isAerobic ? Math.max(1, Math.round(elapsed / 60)) : elapsed;
+    }
+    if (partial < 1) { showToast('まだ何もできてないよ💦'); return; }
+    // target を partial に書き換えて finish(true) で保存
+    const orig = selected.target;
+    selected.target = partial;
+    finish(true);
+    selected = null;
   });
 
   resetBtn.addEventListener('click', () => {
