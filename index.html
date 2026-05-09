@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v9">
+<html lang="ja" data-app-version="v10">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -750,6 +750,16 @@
       </div>
       <button class="save-btn-wide" id="saveTotalsBtn">合計を保存</button>
     </div>
+
+    <div class="edit-card">
+      <h3>♻️ ローカル → クラウドに復元</h3>
+      <p style="font-size:12px; opacity:0.7; margin-bottom:10px;">
+        このスマホに残ってる過去の記録（byDay含む）をクラウドに上書きする。
+        例えば彼女のスマホで開いてこれを押すと、彼女のスマホの過去データがクラウドに復活する。
+        <br><b style="color:#c8364b;">⚠️ 相手側のデータが上書きされる可能性あり。慎重に。</b>
+      </p>
+      <button class="save-btn-wide warn" id="forcePushBtn">この端末のデータでクラウドを上書き</button>
+    </div>
   </section>
 
   <nav class="tab-bar" id="tabBar">
@@ -762,7 +772,7 @@
 
   <div class="toast" id="toast"></div>
   <div id="diag" style="margin-top:14px; font-size:11px; opacity:0.8; text-align:center; line-height:1.6; color:#5a3a1f; padding: 0 12px;">
-    <div>v9 — 診断パネル</div>
+    <div>v10 — 復元機能</div>
     <div>📡 coupleId: <code id="diagId" style="background:#fff; padding:2px 6px; border-radius:4px; word-break:break-all; display:inline-block; max-width:100%;">-</code></div>
     <div>🔄 最終受信: <span id="diagLast">接続中…</span></div>
     <div>📝 最終書込: <span id="diagWrite">-</span></div>
@@ -1247,6 +1257,24 @@
     showToast('合計を更新したよ📊');
   });
 
+  $('forcePushBtn').addEventListener('click', async () => {
+    if (!confirm('この端末のデータでクラウドを上書きする？\n相手側のデータが消えるかも。実行する？')) return;
+    try {
+      await setDoc(doc(db, 'couples', COUPLE_ID), {
+        streak: state.streak || 0,
+        total: state.total || { reps: 0, sec: 0 },
+        byDay: state.byDay || {},
+        targets: state.targets || {},
+        lastDate: state.lastDate || '',
+        recent: (state.recent || []).slice(-50),
+        updatedAt: Date.now()
+      }, { merge: true });
+      showToast('クラウドに上書き保存したよ💾', 4000);
+    } catch (e) {
+      showError('保存失敗: ' + (e.code || e.message));
+    }
+  });
+
   // ===== tabs =====
   function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
@@ -1375,8 +1403,7 @@
       }
     } catch (e) { /* offline, skip */ }
   }
-  checkForUpdate();
-  setInterval(checkForUpdate, 30 * 1000);
+  checkForUpdate(); // 起動時のみ（30秒polling廃止）
 
   // 手動同期ボタン
   $('diagForceSync').addEventListener('click', async () => {
