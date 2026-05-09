@@ -790,7 +790,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
@@ -906,7 +906,7 @@
       const snap = await getDoc(doc(db, 'couples', state.coupleId));
       if (!snap.exists()) return;
       const d = snap.data();
-      if (d.her) state.her = d.her;
+      // state.her は 'レベッカ' で固定なのでクラウド値を上書きさせない
       if (d.me)  state.me  = d.me;
       if (typeof d.msg === 'string') state.msg = d.msg;
       if (typeof d.streak === 'number') state.streak = d.streak;
@@ -925,24 +925,73 @@
       console.warn('cloudLoad failed', e);
     }
   }
-  async function cloudSave() {
+  // 部分的なフィールドだけクラウド更新（名前・メッセージ・targets等の上書きOKな項目）
+  async function cloudSavePartial(fields) {
     if (!state.coupleId) return;
     try {
-      await setDoc(doc(db, 'couples', state.coupleId), {
-        her: state.her,
-        me: state.me,
-        msg: state.msg,
-        streak: state.streak,
-        lastDate: state.lastDate,
-        today: state.today,
-        total: state.total,
-        recent: (state.recent || []).slice(-50),
-        byDay: state.byDay || {},
-        targets: state.targets || {},
-        updatedAt: Date.now()
-      }, { merge: true });
+      await setDoc(doc(db, 'couples', state.coupleId),
+        { ...fields, updatedAt: Date.now() },
+        { merge: true });
     } catch (e) {
-      console.warn('cloudSave failed', e);
+      console.warn('cloudSavePartial failed', e);
+      showToast('クラウド保存に失敗💦');
+    }
+  }
+
+  // 累積値の原子的更新（トランザクション）— 競合してもデータが消えない
+  async function cloudCommitSession(sess) {
+    if (!state.coupleId) return;
+    const ref = doc(db, 'couples', state.coupleId);
+    const t = sess.date;
+    const isReps = sess.mode === 'reps';
+    try {
+      await runTransaction(db, async (trx) => {
+        const snap = await trx.get(ref);
+        const cloud = snap.exists() ? snap.data() : {};
+        // 今日のリセット判定
+        let todayReps = cloud.today?.reps || 0;
+        let todaySec  = cloud.today?.sec  || 0;
+        if (cloud.today?.date !== t) { todayReps = 0; todaySec = 0; }
+        if (isReps) todayReps += sess.target;
+        else        todaySec  += sess.target;
+        // ストリーク
+        const yest = yesterdayStr();
+        let streak = cloud.streak || 0;
+        if (cloud.lastDate === t) { /* 既に今日カウント済み */ }
+        else if (cloud.lastDate === yest) streak += 1;
+        else streak = 1;
+        // 累計
+        const total = {
+          reps: (cloud.total?.reps || 0) + (isReps ? sess.target : 0),
+          sec:  (cloud.total?.sec  || 0) + (isReps ? 0 : sess.target)
+        };
+        // byDay
+        const byDay = cloud.byDay || {};
+        byDay[t] = byDay[t] || {};
+        byDay[t][sess.type] = (byDay[t][sess.type] || 0) + sess.target;
+        byDay[t]._sessions = (byDay[t]._sessions || 0) + 1;
+        // recent (最新50件保持)
+        const recent = [...(cloud.recent || []), sess].slice(-50);
+
+        trx.set(ref, {
+          today: { date: t, reps: todayReps, sec: todaySec },
+          total, streak, byDay, recent,
+          lastDate: t,
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        // 反映後の値を呼び出し元のローカルに反映
+        state.today = { date: t, reps: todayReps, sec: todaySec };
+        state.total = total;
+        state.streak = streak;
+        state.byDay = byDay;
+        state.recent = recent;
+        state.lastDate = t;
+      });
+      saveState();
+      refreshStats();
+    } catch (e) {
+      console.warn('cloudCommitSession failed', e);
       showToast('クラウド保存に失敗💦');
     }
   }
@@ -1070,7 +1119,7 @@
       if (running || !selected) return;
       const delta = parseInt(b.dataset.delta, 10);
       const cur = state.targets[selected.key] || 0;
-      const next = Math.max(1, Math.min(999, cur + delta));
+      const next = Math.max(5, Math.min(999, cur + delta));
       state.targets[selected.key] = next;
       saveState();
       cloudSave();
@@ -1097,39 +1146,17 @@
 
   function recordSession() {
     if (!selected) return;
-    if (selected.mode === 'reps') {
-      state.today.reps += selected.target;
-      state.total.reps += selected.target;
-    } else {
-      state.today.sec += selected.target;
-      state.total.sec += selected.target;
-    }
-    const t = todayStr();
-    if (state.lastDate !== t) {
-      state.streak = (state.lastDate === yesterdayStr()) ? state.streak + 1 : 1;
-      state.lastDate = t;
-    }
-    state.recent = state.recent || [];
-    state.recent.push({
-      date: t,
+    const sess = {
+      date: todayStr(),
       time: Date.now(),
       type: selected.key,
       label: selected.label,
       target: selected.target,
       mode: selected.mode
-    });
-    state.recent = state.recent.slice(-50);
-
-    // 日付×種目で集計（永続）
-    state.byDay = state.byDay || {};
-    state.byDay[t] = state.byDay[t] || {};
-    const day = state.byDay[t];
-    day[selected.key] = (day[selected.key] || 0) + selected.target;
-    day._sessions = (day._sessions || 0) + 1;
-
-    saveState();
-    refreshStats();
-    cloudSave();
+    };
+    // クラウドのトランザクションで原子的に増分更新（競合に強い）
+    // 完了後、トランザクション内で計算した値を state に反映
+    cloudCommitSession(sess);
   }
 
   function finish(success) {
@@ -1220,7 +1247,7 @@
     state.msg = msg;
     saveState();
     applyNames();
-    cloudSave();
+    cloudSavePartial({ her: state.her, me: state.me, msg: state.msg, targets: state.targets });
     showToast('保存したよ♡');
   });
 
@@ -1234,7 +1261,12 @@
     state.today.date = todayStr();
     saveState();
     refreshStats();
-    cloudSave();
+    cloudSavePartial({
+      streak: state.streak,
+      today:  state.today,
+      total:  state.total,
+      lastDate: state.today.date
+    });
     showToast('合計を更新したよ📊');
   });
 
@@ -1253,13 +1285,17 @@
       $('dashStatus').textContent = '読み込めなかった💦 (' + err.code + ')';
     });
   }
-  function switchTab(name) {
+  async function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-content').forEach(c => {
       c.hidden = c.id !== 'tab' + name[0].toUpperCase() + name.slice(1);
     });
     if (name === 'stats') ensureDashSub();
-    if (name === 'edit')  fillEditForm();
+    if (name === 'edit') {
+      // 編集タブを開く時は最新を取り直してから埋める（古い値での上書き防止）
+      await cloudLoad();
+      fillEditForm();
+    }
   }
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
