@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v22">
+<html lang="ja" data-app-version="v23">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1195,8 +1195,8 @@
         msg: s.msg || '',
         streak: s.streak || 0,
         lastDate: s.lastDate || '',
-        today: s.today || { date: '', reps: 0, sec: 0 },
-        total: s.total || { reps: 0, sec: 0 },
+        today: { date: s.today?.date || '', reps: s.today?.reps || 0, sec: s.today?.sec || 0 },
+        total: { reps: s.total?.reps || 0, sec: s.total?.sec || 0 },
         recent: s.recent || [],
         byDay: s.byDay || {},
         speed: s.speed || 'normal',
@@ -1247,12 +1247,16 @@
   function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function refreshStats() {
-    $('streak').textContent = state.streak;
+    const safeNum = (v) => Number.isFinite(v) ? v : 0;
+    // 念のためここでも NaN を 0 に補正
+    if (!Number.isFinite(state.total.reps)) state.total.reps = 0;
+    if (!Number.isFinite(state.total.sec))  state.total.sec  = 0;
+    $('streak').textContent = safeNum(state.streak);
     const td = todayFromByDay(state.byDay);
-    $('todayReps').textContent = td.reps;
-    $('todaySec').textContent = td.sec;
-    $('totalReps').textContent = state.total.reps;
-    $('totalSec').textContent = state.total.sec;
+    $('todayReps').textContent = safeNum(td.reps);
+    $('todaySec').textContent  = safeNum(td.sec);
+    $('totalReps').textContent = safeNum(state.total.reps);
+    $('totalSec').textContent  = safeNum(state.total.sec);
   }
   function todayFromByDay(byDay) {
     const t = todayStr();
@@ -1268,8 +1272,8 @@
   function applyCloudData(d) {
     if (typeof d.streak === 'number') state.streak = d.streak;
     if (d.lastDate) state.lastDate = d.lastDate;
-    if (d.today) state.today = d.today;
-    if (d.total) state.total = d.total;
+    if (d.today) state.today = { date: d.today.date || '', reps: d.today.reps || 0, sec: d.today.sec || 0 };
+    if (d.total) state.total = { reps: d.total.reps || 0, sec: d.total.sec || 0 };
     if (Array.isArray(d.recent)) state.recent = d.recent;
     if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
     if (d.targets && typeof d.targets === 'object') state.targets = { ...state.targets, ...d.targets };
