@@ -322,6 +322,57 @@
     text-align: center;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== dashboard (view mode) ===== */
+  .dashboard { display: none; width: 100%; max-width: 360px; }
+  body.view-mode .dashboard { display: block; }
+  body.view-mode .stage,
+  body.view-mode .counter-label,
+  body.view-mode .counter,
+  body.view-mode .controls,
+  body.view-mode .action-row,
+  body.view-mode .stats-card,
+  body.view-mode .footer-row,
+  body.view-mode .love-note { display: none !important; }
+
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .dash-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .dash-card.full { grid-column: 1 / -1; }
+  .dash-card .label { font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
+  .dash-big {
+    font-size: 32px; font-weight: 900; color: #d2691e;
+    text-shadow: 2px 2px 0 #fff; line-height: 1;
+  }
+  .dash-big small { font-size: 14px; opacity: 0.7; margin-left: 2px; }
+  .dash-streak-big {
+    font-size: 30px; font-weight: 900;
+    background: linear-gradient(90deg, #ff7a9b, #ffb988);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .dash-recent {
+    list-style: none; padding: 0; margin: 0;
+  }
+  .dash-recent li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px dashed #ffd6c2;
+    font-size: 13px;
+  }
+  .dash-recent li:last-child { border-bottom: none; }
+  .dash-recent .rec-time { opacity: 0.6; font-size: 12px; }
+  .dash-recent .empty { justify-content: center; opacity: 0.6; font-style: italic; padding: 16px 0; }
+  .dash-update { font-size: 11px; opacity: 0.55; text-align: right; margin: 4px 4px 12px; }
+  .dash-status { font-size: 12px; opacity: 0.7; text-align: center; margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -394,6 +445,42 @@
   <div class="footer-row">
     <button class="text-btn" id="setupBtn">✏️ メッセージを編集</button>
     <button class="text-btn" id="shareBtn">💌 リンクを送る</button>
+    <button class="text-btn" id="dashBtn">👀 がんばりを見る</button>
+  </div>
+
+  <!-- dashboard for boyfriend (view mode) -->
+  <div class="dashboard" id="dashboard">
+    <h2 id="dashName" style="text-align:center; font-size:22px; margin-bottom:4px; color:#d2691e;">きみのがんばり</h2>
+    <div class="dash-status" id="dashStatus">読み込み中…</div>
+
+    <div class="dash-grid">
+      <div class="dash-card full" style="text-align:center;">
+        <div class="label">連続記録</div>
+        <div class="dash-streak-big">🔥 <span id="dashStreak">0</span> 日</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">今日の回数</div>
+        <div class="dash-big"><span id="dashTodayReps">0</span><small>回</small></div>
+      </div>
+      <div class="dash-card">
+        <div class="label">今日の秒数</div>
+        <div class="dash-big"><span id="dashTodaySec">0</span><small>秒</small></div>
+      </div>
+      <div class="dash-card">
+        <div class="label">これまでの回数</div>
+        <div class="dash-big"><span id="dashTotalReps">0</span><small>回</small></div>
+      </div>
+      <div class="dash-card">
+        <div class="label">これまでの秒数</div>
+        <div class="dash-big"><span id="dashTotalSec">0</span><small>秒</small></div>
+      </div>
+      <div class="dash-card full">
+        <div class="label">最近のがんばり</div>
+        <ul class="dash-recent" id="dashRecent"><li class="empty">読み込み中…</li></ul>
+      </div>
+    </div>
+    <div class="dash-update" id="dashUpdate">—</div>
+    <button class="text-btn" id="dashBackBtn" style="width:100%;">← アプリに戻る</button>
   </div>
 
   <!-- setup modal: for the boyfriend to configure before sending -->
@@ -415,7 +502,21 @@
 
   <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
+    authDomain: "cinnamon-workout.firebaseapp.com",
+    projectId: "cinnamon-workout",
+    storageBucket: "cinnamon-workout.firebasestorage.app",
+    messagingSenderId: "587980763699",
+    appId: "1:587980763699:web:ca9f711928b463a9d8a946"
+  };
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+
   const $ = (id) => document.getElementById(id);
   const roll = $('roll');
   const speech = $('speech');
@@ -438,20 +539,26 @@
       const raw = localStorage.getItem(STORE_KEY);
       const s = raw ? JSON.parse(raw) : {};
       return {
+        coupleId: s.coupleId || '',
         her: s.her || '',
         me: s.me || '',
         msg: s.msg || '',
         streak: s.streak || 0,
         lastDate: s.lastDate || '',
         today: s.today || { date: '', reps: 0, sec: 0 },
-        total: s.total || { reps: 0, sec: 0 }
+        total: s.total || { reps: 0, sec: 0 },
+        recent: s.recent || []
       };
     } catch {
-      return { her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0} };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[] };
     }
   }
   const state = loadState();
   function saveState() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  function newCoupleId() {
+    const a = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g,'');
+    return a.slice(0, 32);
+  }
 
   function todayStr() {
     const d = new Date();
@@ -463,15 +570,18 @@
   }
 
   // hydrate from URL — boyfriend sends a configured link
+  const urlParams = new URLSearchParams(location.search);
+  const isViewMode = urlParams.get('view') === 'me';
   (function fromUrl() {
-    const u = new URL(location.href);
-    const her = u.searchParams.get('her');
-    const me  = u.searchParams.get('me');
-    const msg = u.searchParams.get('msg');
+    const her = urlParams.get('her');
+    const me  = urlParams.get('me');
+    const msg = urlParams.get('msg');
+    const id  = urlParams.get('id');
     let touched = false;
     if (her) { state.her = decodeURIComponent(her).slice(0,14); touched = true; }
     if (me)  { state.me  = decodeURIComponent(me).slice(0,14);  touched = true; }
     if (msg) { state.msg = decodeURIComponent(msg).slice(0,80); touched = true; }
+    if (id)  { state.coupleId = id.slice(0, 64); touched = true; }
     if (touched) saveState();
   })();
 
@@ -502,6 +612,50 @@
     $('todaySec').textContent = state.today.sec;
     $('totalReps').textContent = state.total.reps;
     $('totalSec').textContent = state.total.sec;
+  }
+
+  // ===== Firestore I/O =====
+  async function cloudLoad() {
+    if (!state.coupleId) return;
+    try {
+      const snap = await getDoc(doc(db, 'couples', state.coupleId));
+      if (!snap.exists()) return;
+      const d = snap.data();
+      if (d.her) state.her = d.her;
+      if (d.me)  state.me  = d.me;
+      if (typeof d.msg === 'string') state.msg = d.msg;
+      if (typeof d.streak === 'number') state.streak = d.streak;
+      if (d.lastDate) state.lastDate = d.lastDate;
+      if (d.today) state.today = d.today;
+      if (d.total) state.total = d.total;
+      if (Array.isArray(d.recent)) state.recent = d.recent;
+      // reset today if rolled over locally
+      if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
+      saveState();
+      applyNames();
+      refreshStats();
+    } catch (e) {
+      console.warn('cloudLoad failed', e);
+    }
+  }
+  async function cloudSave() {
+    if (!state.coupleId) return;
+    try {
+      await setDoc(doc(db, 'couples', state.coupleId), {
+        her: state.her,
+        me: state.me,
+        msg: state.msg,
+        streak: state.streak,
+        lastDate: state.lastDate,
+        today: state.today,
+        total: state.total,
+        recent: (state.recent || []).slice(-50),
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch (e) {
+      console.warn('cloudSave failed', e);
+      showToast('クラウド保存に失敗💦');
+    }
   }
 
   // ===== speech (named cheers) =====
@@ -582,8 +736,19 @@
       state.streak = (state.lastDate === yesterdayStr()) ? state.streak + 1 : 1;
       state.lastDate = t;
     }
+    state.recent = state.recent || [];
+    state.recent.push({
+      date: t,
+      time: Date.now(),
+      type: selected.key,
+      label: selected.label,
+      target: selected.target,
+      mode: selected.mode
+    });
+    state.recent = state.recent.slice(-50);
     saveState();
     refreshStats();
+    cloudSave();
   }
 
   function finish(success) {
@@ -655,10 +820,12 @@
     state.her = her;
     state.me  = me;
     state.msg = msg;
+    if (!state.coupleId) state.coupleId = newCoupleId();
     saveState();
     applyNames();
     modal.classList.remove('show');
     showSpeech(`${her}、よろしくね♡`, 2000);
+    cloudSave();
   });
 
   $('setupBtn').addEventListener('click', () => {
@@ -671,8 +838,12 @@
 
   $('shareBtn').addEventListener('click', async () => {
     if (!state.her) { showToast('まず名前を入れてね💦'); $('setupBtn').click(); return; }
+    if (!state.coupleId) state.coupleId = newCoupleId();
+    saveState();
+    cloudSave();
     const url = new URL(location.href);
     url.search = ''; // reset
+    url.searchParams.set('id', state.coupleId);
     url.searchParams.set('her', state.her);
     if (state.me)  url.searchParams.set('me',  state.me);
     if (state.msg) url.searchParams.set('msg', state.msg);
@@ -693,17 +864,80 @@
     }
   });
 
-  // ===== boot =====
-  applyNames();
-  refreshStats();
+  // ===== dashboard / view mode =====
+  $('dashBtn').addEventListener('click', () => {
+    if (!state.coupleId) { showToast('まずセットアップしてね💦'); $('setupBtn').click(); return; }
+    const url = new URL(location.href);
+    url.search = '';
+    url.searchParams.set('view', 'me');
+    url.searchParams.set('id', state.coupleId);
+    location.href = url.toString();
+  });
+  $('dashBackBtn').addEventListener('click', () => {
+    const url = new URL(location.href);
+    url.search = '';
+    location.href = url.toString();
+  });
 
-  // Decide first-run UX:
-  // - If URL had params (her is set), it's the girlfriend opening the link → just greet her.
-  // - If no name yet at all → show modal so the boyfriend can set it up before sending.
-  if (!state.her) {
-    setTimeout(() => modal.classList.add('show'), 200);
+  function formatRel(ms) {
+    const diff = Date.now() - ms;
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return sec + '秒前';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return min + '分前';
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + '時間前';
+    return Math.floor(hr / 24) + '日前';
+  }
+  function renderDashboard(d) {
+    const her = d.her || 'きみ';
+    document.title = her + 'のがんばり 💕';
+    $('dashName').textContent = her + 'のがんばり';
+    $('dashStreak').textContent = d.streak || 0;
+    $('dashTodayReps').textContent = (d.today && d.today.reps) || 0;
+    $('dashTodaySec').textContent  = (d.today && d.today.sec)  || 0;
+    $('dashTotalReps').textContent = (d.total && d.total.reps) || 0;
+    $('dashTotalSec').textContent  = (d.total && d.total.sec)  || 0;
+    $('dashUpdate').textContent = d.updatedAt ? ('最終更新: ' + formatRel(d.updatedAt)) : '—';
+    $('dashStatus').textContent = '';
+    const recent = (d.recent || []).slice().reverse();
+    $('dashRecent').innerHTML = recent.length
+      ? recent.map(r => {
+          const t = new Date(r.time || 0);
+          const ts = (t.getMonth()+1) + '/' + t.getDate() + ' ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+          const unit = r.mode === 'time' ? '秒' : '回';
+          return `<li><span>${escapeHtml(r.label || r.type)} (${r.target}${unit})</span><span class="rec-time">${ts}</span></li>`;
+        }).join('')
+      : '<li class="empty">まだ何もしてないよ〜</li>';
+  }
+
+  // ===== boot =====
+  if (isViewMode) {
+    document.body.classList.add('view-mode');
+    const id = urlParams.get('id') || state.coupleId;
+    if (!id) {
+      $('dashStatus').textContent = 'リンクが正しくないよ💦';
+    } else {
+      onSnapshot(doc(db, 'couples', id), (snap) => {
+        if (!snap.exists()) {
+          $('dashStatus').textContent = 'まだ記録がないよ〜';
+          return;
+        }
+        renderDashboard(snap.data());
+      }, (err) => {
+        console.warn(err);
+        $('dashStatus').textContent = '読み込めなかった💦 (' + err.code + ')';
+      });
+    }
   } else {
-    setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
+    applyNames();
+    refreshStats();
+    if (!state.her) {
+      setTimeout(() => modal.classList.add('show'), 200);
+    } else {
+      setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
+      cloudLoad();
+    }
   }
 </script>
 </body>
