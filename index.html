@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v25">
+<html lang="ja" data-app-version="v26">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -780,6 +780,35 @@
     margin-left: 4px;
     min-width: 28px;
     text-align: right;
+  }
+  .donut-progress {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #ffd6e7;
+  }
+  .donut-progress-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    color: #5a3a1f;
+    margin-bottom: 6px;
+  }
+  .donut-progress-head b { color: #ff7eb9; font-size: 14px; }
+  .donut-progress-bar {
+    height: 14px;
+    background: linear-gradient(180deg, #fff0f5, #ffe6ef);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #ffd6e7;
+    position: relative;
+  }
+  .donut-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9bb3 0%, #ffb988 60%, #ffd76b 100%);
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(.6,.2,.4,1);
+    box-shadow: inset 0 -3px 6px rgba(255, 200, 220, 0.4);
   }
 
   /* ===== edit form ===== */
@@ -2036,6 +2065,7 @@
     return `${m}月${d}日 (${WEEK[dt.getDay()]})`;
   }
   // 直近14日の種目別カロリー比率をドーナツチャートで表示
+  const KCAL_PER_DONUT = 250; // シナモンロール 1個 ≈ 250 kcal
   function renderChart(byDay) {
     const cals = {};
     EX_ORDER.forEach(typ => cals[typ] = 0);
@@ -2054,7 +2084,7 @@
     }
     const COLORS = { squat: '#ff7eb9', situp: '#ffb988', burpee: '#a8d4f5', plank: '#b896f5' };
     const cx = 90, cy = 90, r = 65, ir = 38;
-    let cumDeg = -90; // 12時から開始
+    let cumDeg = -90;
     function arc(startDeg, endDeg, color) {
       const sR = startDeg * Math.PI / 180;
       const eR = endDeg * Math.PI / 180;
@@ -2069,22 +2099,37 @@
     const slices = present.map(typ => {
       const portion = cals[typ] / total;
       const startDeg = cumDeg;
-      cumDeg += portion * 360 - 0.001; // 浮動小数誤差で全周超え防止
+      cumDeg += portion * 360 - 0.001;
       return arc(startDeg, cumDeg, COLORS[typ]);
     }).join('');
     const legendRows = present.map(typ => {
       const pct = Math.round(cals[typ] / total * 100);
       return `<div class="legend-row"><span class="legend-dot" style="background:${COLORS[typ]}"></span>${EX_ICON[typ]} ${EX_LABEL[typ]}<b>${cals[typ].toFixed(1)}kcal</b><span class="legend-pct">${pct}%</span></div>`;
     }).join('');
+
+    // ドーナツ換算
+    const donutCount = total / KCAL_PER_DONUT;
+    const wholeDonuts = Math.floor(donutCount);
+    const fraction = donutCount - wholeDonuts;
+    const remainingKcal = (1 - fraction) * KCAL_PER_DONUT;
+    const donutEmojis = '🍩'.repeat(Math.min(wholeDonuts, 5)) + (wholeDonuts > 5 ? '…' : '');
+
     $('chart').innerHTML = `
       <div class="donut-wrap">
         <svg viewBox="0 0 180 180" class="donut-svg">
           ${slices}
-          <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="10" fill="#888">14日合計</text>
-          <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="20" font-weight="900" fill="#ff7eb9">${total.toFixed(1)}</text>
-          <text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="10" fill="#888">kcal</text>
+          <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="11" fill="#888">14日で🍩</text>
+          <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="22" font-weight="900" fill="#ff7eb9">${donutCount.toFixed(2)}</text>
+          <text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="10" fill="#888">個分 (${total.toFixed(0)}kcal)</text>
         </svg>
         <div class="donut-legend">${legendRows}</div>
+      </div>
+      <div class="donut-progress">
+        <div class="donut-progress-head">
+          <span>${wholeDonuts > 0 ? `🍩 ${wholeDonuts}個 達成！${donutEmojis} ` : ''}つぎの🍩まで</span>
+          <span><b>あと ${remainingKcal.toFixed(0)} kcal</b></span>
+        </div>
+        <div class="donut-progress-bar"><div class="donut-progress-fill" style="width:${(fraction*100).toFixed(1)}%"></div></div>
       </div>`;
   }
 
