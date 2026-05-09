@@ -230,6 +230,34 @@
     box-shadow: 0 4px 12px rgba(210, 105, 30, 0.35);
   }
 
+  .speed-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 10px;
+  }
+  .speed-btn {
+    flex: 1;
+    background: #fff;
+    border: 2px solid #cfe3f5;
+    border-radius: 12px;
+    padding: 9px 4px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #4a7ba8;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.12s, background 0.12s;
+  }
+  .speed-btn:active { transform: translateY(1px); }
+  .speed-btn.active {
+    background: #5cb6e8;
+    border-color: #5cb6e8;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(92, 182, 232, 0.35);
+  }
+
   .action-row {
     display: flex;
     gap: 8px;
@@ -360,17 +388,32 @@
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .dash-recent {
-    list-style: none; padding: 0; margin: 0;
+  .dash-daily { display: flex; flex-direction: column; gap: 10px; }
+  .day-row {
+    border-bottom: 1px dashed #cfe3f5;
+    padding-bottom: 9px;
   }
-  .dash-recent li {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 0; border-bottom: 1px dashed #ffd6c2;
-    font-size: 13px;
+  .day-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .day-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 4px;
   }
-  .dash-recent li:last-child { border-bottom: none; }
-  .dash-recent .rec-time { opacity: 0.6; font-size: 12px; }
-  .dash-recent .empty { justify-content: center; opacity: 0.6; font-style: italic; padding: 16px 0; }
+  .day-date { font-weight: bold; color: #4a7ba8; font-size: 14px; }
+  .day-meta { font-size: 11px; opacity: 0.6; }
+  .day-items {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .day-item {
+    background: #f0f7ff;
+    border: 1px solid #cfe3f5;
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 12px;
+    color: #4a7ba8;
+    white-space: nowrap;
+  }
+  .day-item b { color: #d2691e; margin-left: 2px; font-size: 13px; }
+  .day-empty { text-align: center; opacity: 0.6; font-style: italic; padding: 16px 0; }
   .dash-update { font-size: 11px; opacity: 0.55; text-align: right; margin: 4px 4px 12px; }
   .dash-status { font-size: 12px; opacity: 0.7; text-align: center; margin: 6px 0; }
 </style>
@@ -448,6 +491,12 @@
     <button class="menu-btn" data-key="burpee" data-target="8" data-mode="reps">バーピー 8回</button>
   </div>
 
+  <div class="speed-row" id="speedRow">
+    <button class="speed-btn" data-speed="slow">🐢 ゆっくり</button>
+    <button class="speed-btn" data-speed="normal">⚡ ふつう</button>
+    <button class="speed-btn" data-speed="fast">🚀 はやい</button>
+  </div>
+
   <div class="action-row">
     <button class="action-btn start-btn" id="startBtn" disabled>スタート</button>
     <button class="action-btn stop-btn" id="resetBtn">リセット</button>
@@ -501,7 +550,7 @@
       </div>
       <div class="dash-card full">
         <div class="label">最近のがんばり</div>
-        <ul class="dash-recent" id="dashRecent"><li class="empty">読み込み中…</li></ul>
+        <div class="dash-daily" id="dashRecent"><div class="day-empty">読み込み中…</div></div>
       </div>
     </div>
     <div class="dash-update" id="dashUpdate">—</div>
@@ -575,10 +624,12 @@
         lastDate: s.lastDate || '',
         today: s.today || { date: '', reps: 0, sec: 0 },
         total: s.total || { reps: 0, sec: 0 },
-        recent: s.recent || []
+        recent: s.recent || [],
+        byDay: s.byDay || {},
+        speed: s.speed || 'normal'
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[] };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal' };
     }
   }
   const state = loadState();
@@ -647,6 +698,7 @@
       if (d.today) state.today = d.today;
       if (d.total) state.total = d.total;
       if (Array.isArray(d.recent)) state.recent = d.recent;
+      if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
       // reset today if rolled over locally
       if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
       saveState();
@@ -668,6 +720,7 @@
         today: state.today,
         total: state.total,
         recent: (state.recent || []).slice(-50),
+        byDay: state.byDay || {},
         updatedAt: Date.now()
       }, { merge: true });
     } catch (e) {
@@ -740,6 +793,23 @@
     });
   });
 
+  // ===== speed selector =====
+  const SPEED_MULT = { slow: 1.45, normal: 1.0, fast: 0.65 };
+  const speedBtns = document.querySelectorAll('.speed-btn');
+  function applySpeedUI() {
+    speedBtns.forEach(b => b.classList.toggle('active', b.dataset.speed === (state.speed || 'normal')));
+  }
+  speedBtns.forEach(b => {
+    b.addEventListener('click', () => {
+      if (running) return;
+      state.speed = b.dataset.speed;
+      saveState();
+      applySpeedUI();
+      showSpeech(b.dataset.speed === 'fast' ? 'はやくいくよ！' : b.dataset.speed === 'slow' ? 'ゆっくり〜' : 'いいペースで！', 1200);
+    });
+  });
+  applySpeedUI();
+
   function recordSession() {
     if (!selected) return;
     if (selected.mode === 'reps') {
@@ -764,6 +834,14 @@
       mode: selected.mode
     });
     state.recent = state.recent.slice(-50);
+
+    // 日付×種目で集計（永続）
+    state.byDay = state.byDay || {};
+    state.byDay[t] = state.byDay[t] || {};
+    const day = state.byDay[t];
+    day[selected.key] = (day[selected.key] || 0) + selected.target;
+    day._sessions = (day._sessions || 0) + 1;
+
     saveState();
     refreshStats();
     cloudSave();
@@ -774,6 +852,7 @@
     clearInterval(timerId);
     timerId = null;
     setAnim('idle');
+    if (rollAnimEl) rollAnimEl.style.animationDuration = '';
     startBtn.textContent = 'スタート';
     if (success) {
       showSpeech(pick(cheers.end()), 2600);
@@ -783,6 +862,7 @@
     }
   }
 
+  const rollAnimEl = document.querySelector('.roll-anim');
   startBtn.addEventListener('click', () => {
     if (!selected) return;
     if (running) { finish(false); return; }
@@ -793,7 +873,10 @@
     showSpeech(pick(cheers.start()), 1500);
 
     if (selected.mode === 'reps') {
-      const interval = selected.key === 'burpee' ? 900 : 1200;
+      const base = selected.key === 'burpee' ? 900 : 1200;
+      const interval = Math.round(base * (SPEED_MULT[state.speed] || 1));
+      // アニメーションも1回ぶんで1サイクルするよう連動
+      rollAnimEl.style.animationDuration = interval + 'ms';
       counter.textContent = '0 / ' + selected.target;
       timerId = setInterval(() => {
         count++;
@@ -887,6 +970,15 @@
     if (hr < 24) return hr + '時間前';
     return Math.floor(hr / 24) + '日前';
   }
+  const EX_LABEL = { squat: 'スクワット', pushup: '腕立て', plank: 'プランク', burpee: 'バーピー' };
+  const EX_ICON  = { squat: '🦵', pushup: '💪', plank: '🧘', burpee: '🤸' };
+  const EX_UNIT  = { squat: '回', pushup: '回', plank: '秒', burpee: '回' };
+  const WEEK = ['日','月','火','水','木','金','土'];
+  function formatDay(ymd) {
+    const [y, m, d] = ymd.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    return `${m}月${d}日 (${WEEK[dt.getDay()]})`;
+  }
   function renderDashboard(d) {
     const her = d.her || 'きみ';
     document.title = her + 'のがんばり 💕';
@@ -898,15 +990,33 @@
     $('dashTotalSec').textContent  = (d.total && d.total.sec)  || 0;
     $('dashUpdate').textContent = d.updatedAt ? ('最終更新: ' + formatRel(d.updatedAt)) : '—';
     $('dashStatus').textContent = '';
-    const recent = (d.recent || []).slice().reverse();
-    $('dashRecent').innerHTML = recent.length
-      ? recent.map(r => {
-          const t = new Date(r.time || 0);
-          const ts = (t.getMonth()+1) + '/' + t.getDate() + ' ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
-          const unit = r.mode === 'time' ? '秒' : '回';
-          return `<li><span>${escapeHtml(r.label || r.type)} (${r.target}${unit})</span><span class="rec-time">${ts}</span></li>`;
+
+    // 日付ごとの集計
+    const byDay = d.byDay || {};
+    const days = Object.keys(byDay).sort().reverse();
+    const dailyHtml = days.length
+      ? days.map(day => {
+          const e = byDay[day] || {};
+          const sessionN = e._sessions || 0;
+          const items = Object.keys(e)
+            .filter(k => k !== '_sessions')
+            .map(k => {
+              const ic = EX_ICON[k] || '✨';
+              const lb = EX_LABEL[k] || k;
+              const un = EX_UNIT[k] || '';
+              return `<span class="day-item">${ic} ${escapeHtml(lb)} <b>${e[k]}${un}</b></span>`;
+            }).join('');
+          return `
+            <div class="day-row">
+              <div class="day-head">
+                <span class="day-date">${formatDay(day)}</span>
+                ${sessionN ? `<span class="day-meta">${sessionN}セット</span>` : ''}
+              </div>
+              <div class="day-items">${items}</div>
+            </div>`;
         }).join('')
-      : '<li class="empty">まだ何もしてないよ〜</li>';
+      : '<div class="day-empty">まだ何もしてないよ〜</div>';
+    $('dashRecent').innerHTML = dailyHtml;
   }
 
   // ===== boot =====
