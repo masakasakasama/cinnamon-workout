@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v14">
+<html lang="ja" data-app-version="v15">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -772,8 +772,9 @@
 
   <div class="toast" id="toast"></div>
   <div id="diag" style="margin-top:14px; font-size:11px; opacity:0.8; text-align:center; line-height:1.6; color:#5a3a1f; padding: 0 12px;">
-    <div>v14 — long-polling強制</div>
+    <div>v15 — 書込キュー</div>
     <div id="diagStatus">🟡 接続中…</div>
+    <div id="pendingBadge" style="color:#d2691e; font-weight:bold;"></div>
     <div>📡 coupleId: <code id="diagId" style="background:#fff; padding:2px 6px; border-radius:4px; word-break:break-all; display:inline-block; max-width:100%;">-</code></div>
     <div>🔄 最終受信: <span id="diagLast">-</span></div>
     <div>📝 最終書込: <span id="diagWrite">-</span></div>
@@ -835,10 +836,11 @@
         byDay: s.byDay || {},
         speed: s.speed || 'normal',
         targets: s.targets || { squat:10, pushup:10, situp:15, plank:30, burpee:10 },
-        soundOn: s.soundOn !== false
+        soundOn: s.soundOn !== false,
+        pendingSessions: s.pendingSessions || []
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:10}, soundOn:true };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:10}, soundOn:true, pendingSessions:[] };
     }
   }
   const state = loadState();
@@ -923,6 +925,7 @@
       snapshotCount++;
       $('diagStatus').textContent = '🟢 接続OK (' + snapshotCount + '回受信)';
       applyCloudData(snap.exists() ? snap.data() : {});
+      flushPendingSessions(); // 接続復活したら未送信を流す
     }, (err) => {
       console.warn('snapshot error', err);
       $('diagStatus').textContent = '🔴 同期エラー';
@@ -943,6 +946,7 @@
         $('diagStatus').textContent = '🟢 接続OK (getDoc経由)';
       }
       applyCloudData(snap.exists() ? snap.data() : {});
+      flushPendingSessions();
     } catch (e) {
       console.warn('fallback sync failed', e);
       $('diagStatus').textContent = '🔴 接続失敗';
@@ -990,7 +994,6 @@
   // ネットワーク的にも軽く、競合しても両方のデータが残る
   async function cloudCommitSession(sess) {
     if (!state.coupleId) return;
-    const ref = doc(db, 'couples', state.coupleId);
     const t = sess.date;
     const isReps = sess.mode === 'reps';
 
@@ -1007,33 +1010,65 @@
     state.byDay[t][sess.type] = (state.byDay[t][sess.type] || 0) + sess.target;
     state.byDay[t]._sessions = (state.byDay[t]._sessions || 0) + 1;
     state.recent = [...(state.recent || []), sess].slice(-50);
+
+    // クラウド書き込みキューに追加（失敗してもデータが消えない）
+    state.pendingSessions = [...(state.pendingSessions || []), sess];
     saveState();
     refreshStats();
+    refreshPendingBadge();
 
-    // クラウドへ原子的に増分更新（多端末でも上書きにならない）
-    const updates = {
-      byDay: { [t]: {
-        [sess.type]: increment(sess.target),
-        _sessions: increment(1)
-      }},
-      lastDate: t,
-      streak: state.streak, // ローカル計算値、最終書き込み勝ち
-      updatedAt: Date.now(),
-      recent: arrayUnion(sess)
-    };
-    if (isReps) updates.total = { reps: increment(sess.target) };
-    else        updates.total = { sec:  increment(sess.target) };
+    // 即座に flush 試行
+    flushPendingSessions();
+  }
 
+  // キューに溜まったセッションを順番にクラウドに送る
+  let _flushing = false;
+  async function flushPendingSessions() {
+    if (_flushing) return;
+    if (!state.pendingSessions?.length) return;
+    if (!state.coupleId) return;
+    _flushing = true;
     try {
-      await setDoc(ref, updates, { merge: true });
-      $('diagWrite').textContent = new Date().toLocaleTimeString('ja-JP') + ' (' + sess.target + sess.mode + ')';
-      $('diagError').textContent = '';
-    } catch (e) {
-      console.warn('cloudCommitSession failed', e);
-      showError('保存失敗💦 ' + (e.code || e.message || 'unknown'));
-      $('diagError').textContent = '保存失敗: ' + (e.code || e.message);
+      while (state.pendingSessions.length) {
+        const sess = state.pendingSessions[0];
+        const t = sess.date;
+        const isReps = sess.mode === 'reps';
+        const updates = {
+          byDay: { [t]: {
+            [sess.type]: increment(sess.target),
+            _sessions: increment(1)
+          }},
+          lastDate: t,
+          streak: state.streak,
+          updatedAt: Date.now(),
+          recent: arrayUnion(sess)
+        };
+        if (isReps) updates.total = { reps: increment(sess.target) };
+        else        updates.total = { sec:  increment(sess.target) };
+        try {
+          await setDoc(doc(db, 'couples', state.coupleId), updates, { merge: true });
+          state.pendingSessions.shift();
+          saveState();
+          refreshPendingBadge();
+          $('diagWrite').textContent = new Date().toLocaleTimeString('ja-JP') + ' (' + sess.target + sess.mode + ')';
+          $('diagError').textContent = '';
+        } catch (e) {
+          console.warn('flush failed for one session, will retry later', e);
+          $('diagError').textContent = '保存失敗(キュー保持): ' + (e.code || e.message);
+          break;
+        }
+      }
+    } finally {
+      _flushing = false;
     }
   }
+  function refreshPendingBadge() {
+    const n = state.pendingSessions?.length || 0;
+    const el = $('pendingBadge');
+    if (el) el.textContent = n > 0 ? `保存待ち ${n} 件` : '';
+  }
+  // 接続復活したら自動 flush するため、定期的に呼ぶ
+  setInterval(() => { if (state.pendingSessions?.length) flushPendingSessions(); }, 10000);
 
   // ===== speech (named cheers) =====
   function n() { return state.her || 'レベッカ'; }
@@ -1484,7 +1519,9 @@
   // ===== boot =====
   applyNames();
   refreshStats();
+  refreshPendingBadge();
   startCloudSync(); // 起動からずっとクラウドと同期し続ける
+  flushPendingSessions(); // 起動時に未送信があれば即送る
   setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
   if (isViewMode) switchTab('stats');
 </script>
