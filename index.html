@@ -590,11 +590,6 @@
   <p class="subtitle" id="subtitle">いっしょにがんばろう！</p>
 
   <section class="tab-content" id="tabHome">
-  <div class="love-note hidden" id="loveNote">
-    <span id="loveText"></span>
-    <span class="from" id="loveFrom"></span>
-  </div>
-
   <div class="stage">
     <div class="speech" id="speech">いっしょにやろ〜！</div>
     <div class="roll" id="roll" data-anim="idle">
@@ -739,19 +734,6 @@
   <!-- ===== EDIT / 編集 TAB ===== -->
   <section class="tab-content" id="tabEdit" hidden>
     <div class="edit-card">
-      <h3>💕 名前・応援メッセージ</h3>
-      <div class="edit-row">
-        <label>💕 自分の名前</label>
-        <input id="inputMe" type="text" placeholder="あなた" maxlength="14">
-      </div>
-      <div style="margin-bottom:10px;">
-        <label style="font-size:13px; color:#5a3a1f;">📝 応援メッセージ</label>
-        <textarea id="inputMsg" rows="3" placeholder="きょうもがんばってね♡" maxlength="80" style="margin-top:6px;"></textarea>
-      </div>
-      <button class="save-btn-wide" id="saveBtn">名前・メッセージを保存</button>
-    </div>
-
-    <div class="edit-card">
       <h3>📊 これまでの合計を編集</h3>
       <p style="font-size:12px; opacity:0.7; margin-bottom:10px;">アプリ前にやってた分を足したい時とか</p>
       <div class="edit-row">
@@ -787,11 +769,11 @@
   </nav>
 
   <div class="toast" id="toast"></div>
-  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v4 — タブ・グラフ・編集</div>
+  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v6 — リアルタイム同期</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, onSnapshot, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
@@ -818,9 +800,6 @@
   const heartsLayer = $('hearts');
   const toast = $('toast');
   const subtitle = $('subtitle');
-  const loveNote = $('loveNote');
-  const loveText = $('loveText');
-  const loveFrom = $('loveFrom');
 
   const STORE_KEY = 'cinnamon-her-v1';
 
@@ -881,14 +860,6 @@
     const her = state.her || 'レベッカ';
     subtitle.innerHTML = '<b>' + escapeHtml(her) + '</b>、いっしょにがんばろう！';
     document.title = her + 'の筋トレ 🥐💕';
-
-    if (state.msg) {
-      loveText.textContent = '「' + state.msg + '」';
-      loveFrom.textContent = state.me ? '— ' + state.me + ' より' : '';
-      loveNote.classList.remove('hidden');
-    } else {
-      loveNote.classList.add('hidden');
-    }
   }
   function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -901,30 +872,32 @@
   }
 
   // ===== Firestore I/O =====
-  async function cloudLoad() {
+  // クラウドの最新値をローカルに反映する共通処理
+  function applyCloudData(d) {
+    if (typeof d.streak === 'number') state.streak = d.streak;
+    if (d.lastDate) state.lastDate = d.lastDate;
+    if (d.today) state.today = d.today;
+    if (d.total) state.total = d.total;
+    if (Array.isArray(d.recent)) state.recent = d.recent;
+    if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
+    if (d.targets && typeof d.targets === 'object') state.targets = { ...state.targets, ...d.targets };
+    if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
+    saveState();
+    refreshStats();
+    if (selected) refreshCountUI();
+    renderDashboard(d); // きろくタブも更新
+  }
+
+  // 起動時にonSnapshot張りっぱなし — 他端末の更新が即反映される
+  function startCloudSync() {
     if (!state.coupleId) return;
-    try {
-      const snap = await getDoc(doc(db, 'couples', state.coupleId));
+    onSnapshot(doc(db, 'couples', state.coupleId), (snap) => {
       if (!snap.exists()) return;
-      const d = snap.data();
-      // state.her は 'レベッカ' で固定なのでクラウド値を上書きさせない
-      if (d.me)  state.me  = d.me;
-      if (typeof d.msg === 'string') state.msg = d.msg;
-      if (typeof d.streak === 'number') state.streak = d.streak;
-      if (d.lastDate) state.lastDate = d.lastDate;
-      if (d.today) state.today = d.today;
-      if (d.total) state.total = d.total;
-      if (Array.isArray(d.recent)) state.recent = d.recent;
-      if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
-      if (d.targets && typeof d.targets === 'object') state.targets = { ...state.targets, ...d.targets };
-      // reset today if rolled over locally
-      if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
-      saveState();
-      applyNames();
-      refreshStats();
-    } catch (e) {
-      console.warn('cloudLoad failed', e);
-    }
+      applyCloudData(snap.data());
+    }, (err) => {
+      console.warn('snapshot error', err);
+      showError('同期エラー: ' + (err.code || err.message));
+    });
   }
   // 部分的なフィールドだけクラウド更新（名前・メッセージ・targets等の上書きOKな項目）
   async function cloudSavePartial(fields) {
@@ -935,7 +908,7 @@
         { merge: true });
     } catch (e) {
       console.warn('cloudSavePartial failed', e);
-      showToast('クラウド保存に失敗💦');
+      showError('保存失敗💦 ' + (e.code || e.message || 'unknown'));
     }
   }
 
@@ -981,7 +954,7 @@
       await setDoc(ref, updates, { merge: true });
     } catch (e) {
       console.warn('cloudCommitSession failed', e);
-      showToast('保存失敗💦 ' + (e.code || e.message || 'unknown'));
+      showError('保存失敗💦 ' + (e.code || e.message || 'unknown'));
     }
   }
 
@@ -1017,11 +990,19 @@
     }
   }
 
-  function showToast(msg) {
+  function showToast(msg, dur = 2400) {
     toast.textContent = msg;
+    toast.style.background = '#5a3a1f';
     toast.classList.add('show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => toast.classList.remove('show'), 2400);
+    toast._t = setTimeout(() => toast.classList.remove('show'), dur);
+  }
+  function showError(msg) {
+    toast.textContent = msg;
+    toast.style.background = '#c8364b';
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.classList.remove('show'); toast.style.background = ''; }, 8000);
   }
 
   // ===== sound (Web Audio synth, no copyrighted assets) =====
@@ -1230,29 +1211,13 @@
   });
 
   // ===== edit forms =====
-  const inputMe  = $('inputMe');
-  const inputMsg = $('inputMsg');
   function fillEditForm() {
-    inputMe.value  = state.me  || '';
-    inputMsg.value = state.msg || '';
     $('editStreak').value     = state.streak || 0;
     $('editTodayReps').value  = state.today.reps || 0;
     $('editTodaySec').value   = state.today.sec  || 0;
     $('editTotalReps').value  = state.total.reps || 0;
     $('editTotalSec').value   = state.total.sec  || 0;
   }
-
-  $('saveBtn').addEventListener('click', () => {
-    const me  = (inputMe.value  || '').trim().slice(0, 14);
-    const msg = (inputMsg.value || '').trim().slice(0, 80);
-    state.her = 'レベッカ';
-    state.me = me;
-    state.msg = msg;
-    saveState();
-    applyNames();
-    cloudSavePartial({ her: state.her, me: state.me, msg: state.msg, targets: state.targets });
-    showToast('保存したよ♡');
-  });
 
   $('saveTotalsBtn').addEventListener('click', () => {
     const num = (id) => Math.max(0, parseInt($(id).value, 10) || 0);
@@ -1274,31 +1239,12 @@
   });
 
   // ===== tabs =====
-  let dashUnsub = null;
-  function ensureDashSub() {
-    if (dashUnsub) return;
-    dashUnsub = onSnapshot(doc(db, 'couples', COUPLE_ID), (snap) => {
-      if (!snap.exists()) {
-        $('dashStatus').textContent = 'まだ記録がないよ〜';
-        return;
-      }
-      renderDashboard(snap.data());
-    }, (err) => {
-      console.warn(err);
-      $('dashStatus').textContent = '読み込めなかった💦 (' + err.code + ')';
-    });
-  }
-  async function switchTab(name) {
+  function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-content').forEach(c => {
       c.hidden = c.id !== 'tab' + name[0].toUpperCase() + name.slice(1);
     });
-    if (name === 'stats') ensureDashSub();
-    if (name === 'edit') {
-      // 編集タブを開く時は最新を取り直してから埋める（古い値での上書き防止）
-      await cloudLoad();
-      fillEditForm();
-    }
+    if (name === 'edit') fillEditForm();
   }
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
@@ -1402,9 +1348,9 @@
   // ===== boot =====
   applyNames();
   refreshStats();
-  cloudLoad(); // 共通URL: 起動時に必ずクラウドから最新を読む
+  startCloudSync(); // 起動からずっとクラウドと同期し続ける
   setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
-  if (isViewMode) switchTab('stats'); // ?view=me ブックマーク用
+  if (isViewMode) switchTab('stats');
 </script>
 </body>
 </html>
