@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v18">
+<html lang="ja" data-app-version="v19">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -188,6 +188,33 @@
     0%, 100% { transform: rotate(-30deg) translateY(8px); }
     50% { transform: rotate(10deg) translateY(-4px); }
   }
+  .roll[data-anim="happy"] .roll-anim { animation: happy 0.6s ease-out; }
+  @keyframes happy {
+    0%   { transform: translateY(0) scale(1) rotate(0); }
+    18%  { transform: translateY(-18px) scale(1.12) rotate(-6deg); }
+    40%  { transform: translateY(-26px) scale(1.16) rotate(6deg); }
+    60%  { transform: translateY(-12px) scale(1.08) rotate(-3deg); }
+    100% { transform: translateY(0) scale(1) rotate(0); }
+  }
+  .roll { cursor: pointer; }
+  .char-switch {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    border: 2px solid #ffd6e7;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 6;
+    box-shadow: 0 2px 6px rgba(255, 150, 200, 0.25);
+    font-family: inherit;
+    line-height: 1;
+    padding: 0;
+  }
+  .char-switch:active { transform: scale(0.92); }
 
   .speech {
     position: absolute;
@@ -728,6 +755,108 @@
   }
   .save-btn-wide:active { transform: translateY(1px); }
   .save-btn-wide.warn { background: #ff8aa3; }
+
+  /* ===== Coach Tab ===== */
+  .coach-title {
+    text-align: center;
+    font-size: 22px;
+    color: #ff7eb9;
+    margin-bottom: 6px;
+    font-weight: 900;
+    text-shadow: 1px 1px 0 #fff;
+  }
+  .coach-greet {
+    text-align: center;
+    font-size: 14px;
+    color: #b8682f;
+    margin-bottom: 14px;
+    line-height: 1.6;
+    background: rgba(255,255,255,0.6);
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1.5px dashed #ffb6c8;
+  }
+  .coach-card {
+    background: linear-gradient(180deg, #fff 0%, #fff8fc 100%);
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 14px rgba(255, 150, 200, 0.18);
+    border: 1.5px solid rgba(255, 200, 220, 0.55);
+    width: 100%;
+  }
+  .coach-card.hero {
+    background: linear-gradient(135deg, #fff0f6 0%, #fff5e8 100%);
+    border: 2px solid #ff9bb3;
+  }
+  .coach-card.tip {
+    background: linear-gradient(135deg, #f0f8ff 0%, #fff8fc 100%);
+  }
+  .coach-eyebrow {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ff7eb9;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .coach-rec {
+    font-size: 18px;
+    font-weight: 900;
+    color: #5a3a1f;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .coach-rec b {
+    background: linear-gradient(90deg, #ff7eb9, #ff9b6b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 22px;
+  }
+  .coach-msg {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.5;
+  }
+  .coach-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .coach-week-cell {
+    text-align: center;
+    font-size: 10px;
+    padding: 6px 2px;
+    border-radius: 8px;
+    background: #f5f5f7;
+  }
+  .coach-week-cell.has {
+    background: linear-gradient(180deg, #ffe2ec, #ffd5e3);
+    color: #d63a72;
+    font-weight: bold;
+  }
+  .coach-week-cell.today {
+    border: 2px solid #ff7eb9;
+    background: #fff;
+  }
+  .coach-week-cell .day { display: block; font-weight: bold; }
+  .coach-week-cell .mark { display: block; font-size: 12px; }
+  .coach-next-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .coach-next-row + .coach-next-row { border-top: 1px dashed #ffd6e7; }
+  .coach-next-row .label { color: #b8682f; }
+  .coach-next-row .val { color: #ff7eb9; font-weight: bold; }
+  #coachTip {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #5a3a1f;
+  }
 </style>
 </head>
 <body>
@@ -738,51 +867,61 @@
   <section class="tab-content" id="tabHome">
   <div class="stage">
     <div class="speech" id="speech">いっしょにやろ〜！</div>
+    <button id="charSwitch" class="char-switch" aria-label="キャラ切替">🍮</button>
     <div class="roll" id="roll" data-anim="idle">
       <div class="roll-anim">
-        <svg viewBox="0 0 100 100" aria-hidden="true">
-          <!-- shadow -->
+        <svg id="charCinnamon" viewBox="0 0 100 100" aria-hidden="true">
           <ellipse cx="50" cy="93" rx="28" ry="3" fill="rgba(120,90,40,0.18)"/>
-
-          <!-- LEFT long droopy ear -->
           <path d="M 38 30 Q 12 32 8 50 Q 6 64 18 66 Q 30 64 36 52 Q 40 42 42 36 Z"
                 fill="#fff" stroke="#c9a06a" stroke-width="2" stroke-linejoin="round"/>
-
-          <!-- RIGHT long droopy ear -->
           <path d="M 62 30 Q 88 32 92 50 Q 94 64 82 66 Q 70 64 64 52 Q 60 42 58 36 Z"
                 fill="#fff" stroke="#c9a06a" stroke-width="2" stroke-linejoin="round"/>
-
-          <!-- tail curl behind body -->
           <path d="M 28 72 q -6 -2 -7 -8 q 0 -6 6 -6"
                 fill="none" stroke="#c9a06a" stroke-width="2" stroke-linecap="round"/>
           <circle cx="22" cy="64" r="1.3" fill="none" stroke="#c9a06a" stroke-width="2"/>
-
-          <!-- head -->
           <ellipse cx="50" cy="50" rx="24" ry="22" fill="#fff" stroke="#c9a06a" stroke-width="2"/>
-
-          <!-- body (small puff under head) -->
           <ellipse cx="50" cy="78" rx="14" ry="11" fill="#fff" stroke="#c9a06a" stroke-width="2"/>
-
-          <!-- arms folded in front -->
           <path d="M 42 74 Q 47 70 50 76 Q 53 70 58 74 Q 56 80 50 80 Q 44 80 42 74 Z"
                 fill="#fff" stroke="#c9a06a" stroke-width="1.6" stroke-linejoin="round"/>
-
-          <!-- feet -->
           <ellipse cx="42" cy="88" rx="5" ry="2.6" fill="#fff" stroke="#c9a06a" stroke-width="1.6"/>
           <ellipse cx="58" cy="88" rx="5" ry="2.6" fill="#fff" stroke="#c9a06a" stroke-width="1.6"/>
-
-          <!-- BLUE oval eyes -->
           <ellipse cx="41" cy="48" rx="3.2" ry="4.6" fill="#5cb6e8"/>
           <ellipse cx="59" cy="48" rx="3.2" ry="4.6" fill="#5cb6e8"/>
           <circle cx="42" cy="46.5" r="1.1" fill="#fff"/>
           <circle cx="60" cy="46.5" r="1.1" fill="#fff"/>
-
-          <!-- ω mouth -->
           <path d="M 46 56 Q 48 58 50 56 Q 52 58 54 56" fill="none" stroke="#a6743a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-
-          <!-- pink cheeks -->
           <ellipse cx="34" cy="56" rx="3.4" ry="2" fill="#ffb6c8" opacity="0.85"/>
           <ellipse cx="66" cy="56" rx="3.4" ry="2" fill="#ffb6c8" opacity="0.85"/>
+        </svg>
+        <svg id="charPudding" viewBox="0 0 100 100" aria-hidden="true" style="display:none;">
+          <!-- shadow -->
+          <ellipse cx="50" cy="93" rx="30" ry="3" fill="rgba(100,70,30,0.2)"/>
+          <!-- LEFT droopy ear -->
+          <path d="M 22 38 Q 10 50 14 64 Q 22 64 26 56 Q 26 46 26 40 Z"
+                fill="#fff39b" stroke="#7a4a2c" stroke-width="2" stroke-linejoin="round"/>
+          <!-- RIGHT droopy ear -->
+          <path d="M 78 38 Q 90 50 86 64 Q 78 64 74 56 Q 74 46 74 40 Z"
+                fill="#fff39b" stroke="#7a4a2c" stroke-width="2" stroke-linejoin="round"/>
+          <!-- main body (egg-shaped, all-in-one) -->
+          <ellipse cx="50" cy="58" rx="32" ry="30" fill="#ffec84" stroke="#7a4a2c" stroke-width="2"/>
+          <!-- BERET (red/brown) -->
+          <ellipse cx="50" cy="22" rx="26" ry="6" fill="#5e1f1f"/>
+          <path d="M 30 22 Q 50 6 70 22 Q 65 25 50 26 Q 35 25 30 22 Z"
+                fill="#7a2828" stroke="#5e1f1f" stroke-width="1.6" stroke-linejoin="round"/>
+          <circle cx="50" cy="11" r="2.6" fill="#5e1f1f"/>
+          <!-- arms (small ovals) -->
+          <ellipse cx="20" cy="68" rx="6" ry="9" fill="#ffec84" stroke="#7a4a2c" stroke-width="2"/>
+          <ellipse cx="80" cy="68" rx="6" ry="9" fill="#ffec84" stroke="#7a4a2c" stroke-width="2"/>
+          <!-- feet -->
+          <ellipse cx="38" cy="88" rx="8" ry="3.5" fill="#ffec84" stroke="#7a4a2c" stroke-width="2"/>
+          <ellipse cx="62" cy="88" rx="8" ry="3.5" fill="#ffec84" stroke="#7a4a2c" stroke-width="2"/>
+          <!-- eyes (small black dots) -->
+          <circle cx="40" cy="50" r="2.6" fill="#1a0e0a"/>
+          <circle cx="60" cy="50" r="2.6" fill="#1a0e0a"/>
+          <!-- nose -->
+          <ellipse cx="50" cy="58" rx="2" ry="1.4" fill="#3a1818"/>
+          <!-- ω mouth -->
+          <path d="M 45 62 Q 47.5 65 50 62.5 Q 52.5 65 55 62" fill="none" stroke="#3a1818" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
     </div>
@@ -878,33 +1017,29 @@
   </section>
 
   <!-- ===== EDIT / 編集 TAB ===== -->
-  <section class="tab-content" id="tabEdit" hidden>
-    <div class="edit-card">
-      <h3>📊 これまでの合計を編集</h3>
-      <p style="font-size:12px; opacity:0.7; margin-bottom:10px;">アプリ前にやってた分を足したい時とか</p>
-      <div class="edit-row">
-        <label>🔥 連続記録 (日)</label>
-        <input id="editStreak" type="number" min="0" inputmode="numeric">
-      </div>
-      <div class="edit-row">
-        <label>これまでの回数</label>
-        <input id="editTotalReps" type="number" min="0" inputmode="numeric">
-      </div>
-      <div class="edit-row">
-        <label>これまでの秒数</label>
-        <input id="editTotalSec" type="number" min="0" inputmode="numeric">
-      </div>
-      <button class="save-btn-wide" id="saveTotalsBtn">合計を保存</button>
+  <section class="tab-content" id="tabCoach" hidden>
+    <h2 class="coach-title">💕 きょうのトレーナー</h2>
+    <div class="coach-greet" id="coachGreet">…</div>
+
+    <div class="coach-card hero" id="coachToday">
+      <div class="coach-eyebrow">💡 きょうのおすすめ</div>
+      <div class="coach-rec" id="coachRec">読み込み中…</div>
+      <div class="coach-msg" id="coachRecMsg"></div>
     </div>
 
-    <div class="edit-card">
-      <h3>♻️ ローカル → クラウドに復元</h3>
-      <p style="font-size:12px; opacity:0.7; margin-bottom:10px;">
-        このスマホに残ってる過去の記録（byDay含む）をクラウドに上書きする。
-        例えば彼女のスマホで開いてこれを押すと、彼女のスマホの過去データがクラウドに復活する。
-        <br><b style="color:#c8364b;">⚠️ 相手側のデータが上書きされる可能性あり。慎重に。</b>
-      </p>
-      <button class="save-btn-wide warn" id="forcePushBtn">この端末のデータでクラウドを上書き</button>
+    <div class="coach-card">
+      <div class="coach-eyebrow">📅 今週のがんばり</div>
+      <div class="coach-week" id="coachWeek"></div>
+    </div>
+
+    <div class="coach-card">
+      <div class="coach-eyebrow">🎯 つぎの目標</div>
+      <div class="coach-next" id="coachNext"></div>
+    </div>
+
+    <div class="coach-card tip">
+      <div class="coach-eyebrow">💖 トレーナーから一言</div>
+      <div id="coachTip">…</div>
     </div>
   </section>
 
@@ -912,7 +1047,7 @@
     <div class="tab-bar-inner">
       <button class="tab-btn active" data-tab="home">🥐 筋トレ</button>
       <button class="tab-btn" data-tab="stats">📊 きろく</button>
-      <button class="tab-btn" data-tab="edit">✏️ 編集</button>
+      <button class="tab-btn" data-tab="coach">💕 コーチ</button>
     </div>
   </nav>
 
@@ -939,7 +1074,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-  import { initializeFirestore, doc, setDoc, getDoc, onSnapshot, increment, arrayUnion, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import { initializeFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, increment, arrayUnion, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
@@ -991,10 +1126,11 @@
         speed: s.speed || 'normal',
         targets: s.targets || { squat:10, pushup:10, situp:15, plank:30, burpee:10 },
         soundOn: s.soundOn !== false,
-        pendingSessions: s.pendingSessions || []
+        pendingSessions: s.pendingSessions || [],
+        character: s.character || 'cinnamon'
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:10}, soundOn:true, pendingSessions:[] };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:10}, soundOn:true, pendingSessions:[], character:'cinnamon' };
     }
   }
   const state = loadState();
@@ -1061,6 +1197,7 @@
     if (Array.isArray(d.recent)) state.recent = d.recent;
     if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
     if (d.targets && typeof d.targets === 'object') state.targets = { ...state.targets, ...d.targets };
+    if (d.character) { state.character = d.character; applyCharacter(); }
     if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
     saveState();
     refreshStats();
@@ -1164,6 +1301,10 @@
     state.byDay[t][sess.type] = (state.byDay[t][sess.type] || 0) + sess.target;
     state.byDay[t][sess.type+'_sets'] = (state.byDay[t][sess.type+'_sets'] || 0) + 1;
     state.byDay[t][sess.type+'_reps'] = sess.target;
+    // 回数別のセット数マップ: { "10": 3, "5": 1 } のように内訳を保持
+    state.byDay[t][sess.type+'_setMap'] = state.byDay[t][sess.type+'_setMap'] || {};
+    const k = String(sess.target);
+    state.byDay[t][sess.type+'_setMap'][k] = (state.byDay[t][sess.type+'_setMap'][k] || 0) + 1;
     state.byDay[t]._sessions = (state.byDay[t]._sessions || 0) + 1;
     state.recent = [...(state.recent || []), sess].slice(-50);
 
@@ -1194,6 +1335,7 @@
             [sess.type]: increment(sess.target),
             [sess.type + '_sets']: increment(1),
             [sess.type + '_reps']: sess.target,
+            [sess.type + '_setMap']: { [String(sess.target)]: increment(1) },
             _sessions: increment(1)
           }},
           lastDate: t,
@@ -1397,6 +1539,43 @@
   });
   applySpeedUI();
 
+  // ===== character switcher =====
+  function applyCharacter() {
+    const isPudding = state.character === 'pudding';
+    const c = $('charCinnamon'), p = $('charPudding');
+    if (c) c.style.display = isPudding ? 'none' : '';
+    if (p) p.style.display = isPudding ? '' : 'none';
+    const sw = $('charSwitch');
+    if (sw) sw.textContent = isPudding ? '🐶' : '🍮';
+  }
+  $('charSwitch')?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    state.character = state.character === 'pudding' ? 'cinnamon' : 'pudding';
+    saveState();
+    applyCharacter();
+    cloudSavePartial({ character: state.character });
+    playHappy();
+  });
+  applyCharacter();
+
+  // ===== happy sound =====
+  function playHappy() {
+    if (!state.soundOn) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    [880, 1320, 1760].forEach((f, i) => setTimeout(() => beep(f, 90, 'triangle', 0.22), i * 80));
+  }
+
+  // タップで嬉しがる
+  roll.addEventListener('click', () => {
+    playHappy();
+    if (running) return; // 筋トレ中は動作変えない
+    const prev = roll.dataset.anim;
+    roll.dataset.anim = 'happy';
+    showSpeech(pick(['きゃっ💕','うれしい〜', 'なで〜♡', 'えへへ', 'もっと〜']), 1500);
+    setTimeout(() => { if (roll.dataset.anim === 'happy') roll.dataset.anim = prev; }, 600);
+  });
+
   function recordSession() {
     if (!selected) return;
     const sess = {
@@ -1480,44 +1659,112 @@
     showSpeech(`${n()}、またね〜`, 1500);
   });
 
-  // ===== edit forms =====
-  function fillEditForm() {
-    $('editStreak').value     = state.streak || 0;
-    $('editTotalReps').value  = state.total.reps || 0;
-    $('editTotalSec').value   = state.total.sec  || 0;
+  // ===== Coach (パーソナルトレーナー) =====
+  const COACH_GREETS = [
+    'きょうも来てくれてありがとう♡',
+    'やっほー、ファイト一緒にがんばろ〜',
+    'なんか今日もきれいだね💕',
+    'おかえり〜、待ってたよ♡',
+    'やる気スイッチおーん！'
+  ];
+  const COACH_TIPS = [
+    '無理しないで、自分のペースが一番だよ✨',
+    '深呼吸しながらやると効果アップ💕',
+    '終わったらストレッチもしようね〜',
+    'お水こまめに飲んで〜♡',
+    'できる回数からでOK！継続が筋肉になる💪',
+    'お腹に力入れるとフォームきれいになるよ',
+    '今日の自分、昨日より1mm強くなってる😌',
+    '休みの日もえらい。回復も筋トレの一部だよ💖'
+  ];
+  function prevDateStr(dateStr, daysBefore = 1) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    dt.setDate(dt.getDate() - daysBefore);
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
   }
-
-  $('saveTotalsBtn').addEventListener('click', () => {
-    const num = (id) => Math.max(0, parseInt($(id).value, 10) || 0);
-    state.streak     = num('editStreak');
-    state.total.reps = num('editTotalReps');
-    state.total.sec  = num('editTotalSec');
-    saveState();
-    refreshStats();
-    cloudSavePartial({
-      streak: state.streak,
-      total:  state.total
-    });
-    showToast('合計を更新したよ📊');
-  });
-
-  $('forcePushBtn').addEventListener('click', async () => {
-    if (!confirm('この端末のデータでクラウドを上書きする？\n相手側のデータが消えるかも。実行する？')) return;
-    try {
-      await setDoc(doc(db, 'couples', COUPLE_ID), {
-        streak: state.streak || 0,
-        total: state.total || { reps: 0, sec: 0 },
-        byDay: state.byDay || {},
-        targets: state.targets || {},
-        lastDate: state.lastDate || '',
-        recent: (state.recent || []).slice(-50),
-        updatedAt: Date.now()
-      }, { merge: true });
-      showToast('クラウドに上書き保存したよ💾', 4000);
-    } catch (e) {
-      showError('保存失敗: ' + (e.code || e.message));
+  function dayHasData(byDay, dateStr) {
+    const e = byDay && byDay[dateStr];
+    if (!e) return false;
+    return EX_ORDER.some(t => (e[t] || 0) > 0);
+  }
+  function deriveStreak(byDay) {
+    if (!byDay) return 0;
+    const t = todayStr();
+    let cur = dayHasData(byDay, t) ? t : prevDateStr(t, 1);
+    if (!dayHasData(byDay, cur)) return 0;
+    let n = 0;
+    while (dayHasData(byDay, cur)) {
+      n++;
+      cur = prevDateStr(cur, 1);
     }
-  });
+    return n;
+  }
+  function renderCoach() {
+    const byDay = state.byDay || {};
+    const t = todayStr();
+    const tdy = byDay[t] || {};
+    const did = EX_ORDER.some(k => (tdy[k] || 0) > 0);
+    const streak = deriveStreak(byDay);
+
+    // 直近7日間の種目別集計
+    const last7 = {};
+    EX_ORDER.forEach(k => last7[k] = 0);
+    for (let i = 0; i < 7; i++) {
+      const k = prevDateStr(t, i);
+      const e = byDay[k] || {};
+      EX_ORDER.forEach(typ => last7[typ] += e[typ] || 0);
+    }
+
+    // 一番手薄な種目
+    const ranked = EX_ORDER.slice().sort((a, b) => last7[a] - last7[b]);
+    const recommendType = ranked[0];
+    const recReps = state.targets?.[recommendType] || (recommendType === 'plank' ? 30 : 10);
+
+    // グリーティング
+    const her = state.her || 'レベッカ';
+    let greet = `${her}、${pick(COACH_GREETS)}`;
+    if (streak >= 3) greet += `<br>🔥 <b>${streak}日連続</b> なんて、もう習慣だね！えらい！`;
+    else if (streak === 2) greet += `<br>🔥 ${streak}日連続！この調子💕`;
+    else if (streak === 1) greet += `<br>🔥 きのうもえらかったね♡`;
+    $('coachGreet').innerHTML = greet;
+
+    // おすすめ
+    if (did) {
+      $('coachRec').innerHTML = `今日は <b>${EX_ICON[recommendType]} ${EX_LABEL[recommendType]} ${recReps}${EX_UNIT[recommendType]}</b> もう1セット行ける？`;
+      $('coachRecMsg').textContent = `今週まだ少なめの種目だよ。バランスよく鍛えるとカラダ全体に効くよ✨`;
+    } else {
+      $('coachRec').innerHTML = `<b>${EX_ICON[recommendType]} ${EX_LABEL[recommendType]} ${recReps}${EX_UNIT[recommendType]}</b> から始めよ♡`;
+      $('coachRecMsg').textContent = `1セットだけでもOK。やる気スイッチ入れちゃおう！`;
+    }
+
+    // 今週の頑張り (7日カレンダー)
+    const wkLabels = ['日','月','火','水','木','金','土'];
+    let wkHtml = '';
+    for (let i = 6; i >= 0; i--) {
+      const k = prevDateStr(t, i);
+      const e = byDay[k] || {};
+      const has = EX_ORDER.some(typ => (e[typ] || 0) > 0);
+      const dt = new Date(k);
+      const isToday = i === 0;
+      wkHtml += `<div class="coach-week-cell ${has ? 'has' : ''} ${isToday ? 'today' : ''}"><span class="day">${dt.getMonth()+1}/${dt.getDate()}</span><span class="mark">${has ? '💪' : '・'}</span><span style="font-size:9px;">${wkLabels[dt.getDay()]}</span></div>`;
+    }
+    $('coachWeek').innerHTML = wkHtml;
+
+    // つぎの目標 (直近7日 vs 目安)
+    const targets = state.targets || {};
+    let nextHtml = '';
+    EX_ORDER.forEach(typ => {
+      const target7 = (targets[typ] || 10) * 5; // 目安: 週5日できれば理想
+      const cur = last7[typ];
+      const pct = target7 > 0 ? Math.min(100, Math.round(cur / target7 * 100)) : 0;
+      nextHtml += `<div class="coach-next-row"><span class="label">${EX_ICON[typ]} ${EX_LABEL[typ]}</span><span class="val">${cur} / ${target7}${EX_UNIT[typ]} (${pct}%)</span></div>`;
+    });
+    $('coachNext').innerHTML = nextHtml;
+
+    // ひとこと
+    $('coachTip').textContent = pick(COACH_TIPS);
+  }
 
   // ===== tabs =====
   function switchTab(name) {
@@ -1525,7 +1772,7 @@
     document.querySelectorAll('.tab-content').forEach(c => {
       c.hidden = c.id !== 'tab' + name[0].toUpperCase() + name.slice(1);
     });
-    if (name === 'edit') fillEditForm();
+    if (name === 'coach') renderCoach();
   }
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
@@ -1553,6 +1800,17 @@
   function calTotalForDay(e) {
     if (!e) return 0;
     return EX_ORDER.reduce((sum, k) => sum + calForType(k, e[k] || 0), 0);
+  }
+  function formatSetMap(setMap, unit) {
+    if (!setMap || typeof setMap !== 'object') return null;
+    const entries = Object.entries(setMap)
+      .filter(([k, c]) => parseInt(k, 10) > 0 && c > 0)
+      .map(([k, c]) => [parseInt(k, 10), c])
+      .sort((a, b) => b[0] - a[0]); // 大きい回数から
+    if (!entries.length) return null;
+    return entries.map(([reps, count]) => {
+      return count > 1 ? `${count}セット × ${reps}${unit}` : `1セット × ${reps}${unit}`;
+    }).join(' + ');
   }
   const WEEK = ['日','月','火','水','木','金','土'];
   function formatDay(ymd) {
@@ -1630,15 +1888,20 @@
         const total = e[k];
         const sets = e[k+'_sets'] || 0;
         const reps = e[k+'_reps'] || 0;
+        const setMap = e[k+'_setMap'];
         const u = EX_UNIT[k];
-        // セット×回数で割り切れる時は「2セット × 10回」表示にする
         let body;
-        if (sets > 0 && reps > 0 && sets * reps === total) {
-          if (sets === 1) {
-            body = `<b>${reps}${u}</b>`;
-          } else {
-            body = `<b>${sets}セット × ${reps}${u}</b> <span style="opacity:0.7;">= ${total}${u}</span>`;
-          }
+        // setMap があれば回数別に分解した形式で表示
+        const breakdown = formatSetMap(setMap, u);
+        if (breakdown) {
+          // 複数の異なる回数があるか
+          const isMixed = breakdown.includes(' + ');
+          body = isMixed
+            ? `<b>${breakdown}</b> <span style="opacity:0.7;">= ${total}${u}</span>`
+            : `<b>${breakdown}</b>`;
+        } else if (sets > 0 && reps > 0 && sets * reps === total) {
+          // 旧データ互換: setMap が無くても sets×reps で表示できる場合
+          body = sets === 1 ? `<b>1セット × ${reps}${u}</b>` : `<b>${sets}セット × ${reps}${u}</b> <span style="opacity:0.7;">= ${total}${u}</span>`;
         } else if (sets > 0) {
           body = `<b>${total}${u}</b> <span style="opacity:0.7;">${sets}セット</span>`;
         } else {
@@ -1720,12 +1983,13 @@
       out.textContent = '= ' + total + EX_UNIT[t] + ' (' + calForType(t, total) + 'kcal)';
     });
   }
-  function saveDayEdit() {
+  async function saveDayEdit() {
     const date = $('dayEditDate').value;
     if (!date) { showToast('日付を選んでね'); return; }
     state.byDay = state.byDay || {};
     const old = state.byDay[date] || {};
-    state.byDay[date] = state.byDay[date] || {};
+    // 新しい日付のオブジェクトをゼロから組み立てる(setMapも完全置換)
+    const newDay = {};
     let totalSets = 0;
     let deltaReps = 0, deltaSec = 0;
     EX_ORDER.forEach(t => {
@@ -1738,20 +2002,38 @@
       const delta = newTotal - oldTotal;
       if (t === 'plank') deltaSec += delta;
       else deltaReps += delta;
-      state.byDay[date][t] = newTotal;
-      state.byDay[date][t+'_sets'] = sets;
-      state.byDay[date][t+'_reps'] = reps;
+      newDay[t] = newTotal;
+      newDay[t+'_sets'] = sets;
+      newDay[t+'_reps'] = reps;
+      // setMap 完全置換: 同じ回数 × N セット
+      newDay[t+'_setMap'] = sets > 0 && reps > 0 ? { [String(reps)]: sets } : {};
       totalSets += sets;
     });
-    state.byDay[date]._sessions = totalSets;
+    newDay._sessions = totalSets;
+    state.byDay[date] = newDay;
     state.total.reps = Math.max(0, state.total.reps + deltaReps);
     state.total.sec  = Math.max(0, state.total.sec  + deltaSec);
     saveState();
     refreshStats();
-    cloudSavePartial({
-      byDay: state.byDay,
-      total: state.total
-    });
+    // updateDoc with dotted path で byDay[date] を完全置換 (setMap merge回避)
+    try {
+      await updateDoc(doc(db, 'couples', COUPLE_ID), {
+        [`byDay.${date}`]: newDay,
+        total: state.total,
+        updatedAt: Date.now()
+      });
+    } catch (e) {
+      if (e.code === 'not-found') {
+        await setDoc(doc(db, 'couples', COUPLE_ID), {
+          byDay: { [date]: newDay },
+          total: state.total,
+          updatedAt: Date.now()
+        }, { merge: true });
+      } else {
+        showError('保存失敗: ' + (e.code || e.message));
+        return;
+      }
+    }
     showToast('保存したよ📅');
     fallbackSync();
   }
