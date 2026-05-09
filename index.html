@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v15">
+<html lang="ja" data-app-version="v16">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,23 +12,46 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
     font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Yu Gothic', sans-serif;
-    background: linear-gradient(135deg, #d6ecff 0%, #ffe1ec 55%, #b8dcff 100%);
+    background:
+      radial-gradient(circle at 20% 10%, #ffe6f0 0%, transparent 40%),
+      radial-gradient(circle at 80% 30%, #e0f0ff 0%, transparent 50%),
+      radial-gradient(circle at 50% 100%, #fff0fa 0%, transparent 50%),
+      linear-gradient(135deg, #ffeaf3 0%, #e6f3ff 50%, #ffe6f7 100%);
+    background-attachment: fixed;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 12px 32px;
+    padding: 16px 12px 100px;
     color: #5a3a1f;
     overflow-x: hidden;
+  }
+  body::before {
+    content: '✦   ✧   ⋆   ❀   ✿';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: rgba(255, 150, 200, 0.3);
+    letter-spacing: 30px;
+    padding-top: 4px;
+    pointer-events: none;
+    z-index: 0;
   }
   h1 {
     font-size: 26px;
     margin-bottom: 4px;
-    text-shadow: 2px 2px 0 #fff;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 8px rgba(255, 150, 200, 0.3);
     text-align: center;
+    background: linear-gradient(90deg, #ff7eb9 0%, #ffb988 50%, #7fb3dc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+    letter-spacing: 1px;
   }
-  .subtitle { font-size: 13px; margin-bottom: 12px; opacity: 0.85; text-align: center; }
-  .subtitle b { color: #d2691e; }
+  .subtitle { font-size: 14px; margin-bottom: 14px; opacity: 0.9; text-align: center; }
+  .subtitle b { color: #ff7eb9; font-size: 15px; }
 
   /* love note from boyfriend */
   .love-note {
@@ -92,19 +115,32 @@
     width: 100%;
     max-width: 360px;
     height: 280px;
-    background: linear-gradient(180deg, #f3faff 0%, #d4ebff 100%);
-    border-radius: 24px;
+    background:
+      radial-gradient(circle at 25% 25%, rgba(255,200,225,0.5) 0%, transparent 30%),
+      radial-gradient(circle at 75% 30%, rgba(200,225,255,0.5) 0%, transparent 30%),
+      linear-gradient(180deg, #fbf6ff 0%, #e8f3ff 100%);
+    border-radius: 28px;
     border: 4px solid #fff;
-    box-shadow: 0 10px 30px rgba(80, 130, 200, 0.22);
+    box-shadow: 0 12px 32px rgba(255, 150, 200, 0.25), 0 4px 12px rgba(150, 200, 255, 0.2);
     position: relative;
     overflow: hidden;
     margin-bottom: 14px;
+  }
+  .stage::before {
+    content: '✿  ❀  ✿';
+    position: absolute;
+    top: 8px; left: 0; right: 0;
+    font-size: 11px;
+    color: rgba(255, 180, 210, 0.45);
+    text-align: center;
+    letter-spacing: 12px;
+    pointer-events: none;
   }
   .ground {
     position: absolute;
     bottom: 0; left: 0; right: 0;
     height: 30px;
-    background: linear-gradient(180deg, #c2dff8 0%, #8fc1e8 100%);
+    background: linear-gradient(180deg, #d4e8f8 0%, #a8c8e8 100%);
   }
 
   .roll {
@@ -198,15 +234,19 @@
   /* ===== counter ===== */
   .counter-label { font-size: 13px; opacity: 0.75; margin-bottom: 2px; min-height: 18px; text-align:center; }
   .counter {
-    font-size: 54px;
+    font-size: 56px;
     font-weight: 900;
-    color: #d2691e;
+    background: linear-gradient(180deg, #ff7eb9 0%, #ff9b6b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     text-shadow: 3px 3px 0 #fff;
     margin: 2px 0 8px;
-    min-height: 62px;
+    min-height: 64px;
     line-height: 1;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     text-align: center;
+    filter: drop-shadow(0 4px 8px rgba(255, 150, 200, 0.25));
   }
 
   /* ===== controls ===== */
@@ -219,23 +259,24 @@
     margin-bottom: 10px;
   }
   .menu-btn {
-    background: #fff;
-    border: 3px solid #ffb988;
-    border-radius: 14px;
-    padding: 12px 6px;
+    background: linear-gradient(180deg, #fff 0%, #fffaf5 100%);
+    border: 2.5px solid #ffc8a8;
+    border-radius: 18px;
+    padding: 13px 6px;
     font-size: 14px;
     font-weight: bold;
-    color: #8b4513;
+    color: #b8682f;
     cursor: pointer;
-    transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+    transition: transform 0.15s, box-shadow 0.15s;
     font-family: inherit;
+    box-shadow: 0 3px 0 rgba(255, 180, 130, 0.35);
   }
-  .menu-btn:active { transform: translateY(1px); }
+  .menu-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(255, 180, 130, 0.35); }
   .menu-btn.active {
-    background: #d2691e;
+    background: linear-gradient(180deg, #ff9bb3 0%, #ff7eb9 100%);
     color: #fff;
-    border-color: #d2691e;
-    box-shadow: 0 4px 12px rgba(210, 105, 30, 0.35);
+    border-color: #ff7eb9;
+    box-shadow: 0 4px 14px rgba(255, 126, 185, 0.45);
   }
 
   .menu-btn.full { grid-column: 1 / -1; }
@@ -332,18 +373,30 @@
     transition: transform 0.12s, background 0.12s;
   }
   .action-btn:active { transform: translateY(1px); }
-  .start-btn { background: #d2691e; color: #fff; }
-  .start-btn:disabled { background: #ddd; color: #999; cursor: not-allowed; }
-  .stop-btn { background: #fff; color: #d2691e; border: 3px solid #d2691e; }
+  .start-btn {
+    background: linear-gradient(180deg, #ff9bb3 0%, #ff7090 100%);
+    color: #fff;
+    box-shadow: 0 4px 0 rgba(220, 80, 120, 0.4), 0 6px 16px rgba(255, 130, 165, 0.35);
+  }
+  .start-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(220, 80, 120, 0.4); }
+  .start-btn:disabled { background: #e8e8e8; color: #aaa; cursor: not-allowed; box-shadow: 0 3px 0 #ccc; }
+  .stop-btn {
+    background: #fff;
+    color: #ff7090;
+    border: 2.5px solid #ff9bb3;
+    box-shadow: 0 4px 0 rgba(255, 155, 179, 0.3);
+  }
+  .stop-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(255, 155, 179, 0.3); }
 
   .stats-card {
     width: 100%;
     max-width: 360px;
-    background: #fff;
-    border-radius: 16px;
-    padding: 12px 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    background: linear-gradient(180deg, #fff 0%, #fff8fc 100%);
+    border-radius: 20px;
+    padding: 14px 16px;
+    box-shadow: 0 6px 18px rgba(255, 150, 200, 0.18);
     margin-bottom: 10px;
+    border: 1.5px solid rgba(255, 200, 220, 0.5);
   }
   .stats-row {
     display: flex;
@@ -351,18 +404,19 @@
     align-items: center;
     font-size: 13px;
   }
-  .stats-row + .stats-row { margin-top: 6px; }
-  .stats-row b { color: #d2691e; font-size: 15px; }
+  .stats-row + .stats-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ffd6e7; }
+  .stats-row b { color: #ff7eb9; font-size: 17px; font-weight: 900; }
   .streak {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: linear-gradient(90deg, #ff9bb3, #ffb988);
+    background: linear-gradient(90deg, #ff7eb9, #ffb988);
     color: #fff;
-    padding: 4px 10px;
+    padding: 5px 12px;
     border-radius: 999px;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 13px;
+    box-shadow: 0 2px 6px rgba(255, 126, 185, 0.35);
   }
 
   .footer-row {
@@ -485,32 +539,34 @@
   .tab-bar {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    background: rgba(255,250,253,0.95);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 -6px 24px rgba(255, 150, 200, 0.18);
     z-index: 50;
-    padding: 7px 12px calc(7px + env(safe-area-inset-bottom));
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     display: flex;
     justify-content: center;
+    border-top: 1px solid rgba(255, 200, 220, 0.6);
   }
-  .tab-bar-inner { display: flex; gap: 4px; max-width: 360px; width: 100%; }
+  .tab-bar-inner { display: flex; gap: 6px; max-width: 360px; width: 100%; }
   .tab-btn {
     flex: 1;
     background: transparent;
     border: none;
-    padding: 9px 4px;
-    font-size: 12px;
+    padding: 10px 4px;
+    font-size: 13px;
     font-weight: bold;
-    color: #88a;
+    color: #aab;
     cursor: pointer;
-    border-radius: 12px;
+    border-radius: 14px;
     font-family: inherit;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.18s, color 0.18s, transform 0.18s;
   }
   .tab-btn.active {
-    background: #5cb6e8;
+    background: linear-gradient(180deg, #ff9bb3, #ff7eb9);
     color: #fff;
-    box-shadow: 0 3px 8px rgba(92,182,232,0.35);
+    box-shadow: 0 4px 12px rgba(255, 126, 185, 0.4);
+    transform: translateY(-2px);
   }
 
   /* ===== chart ===== */
@@ -771,8 +827,9 @@
   </nav>
 
   <div class="toast" id="toast"></div>
-  <div id="diag" style="margin-top:14px; font-size:11px; opacity:0.8; text-align:center; line-height:1.6; color:#5a3a1f; padding: 0 12px;">
-    <div>v15 — 書込キュー</div>
+  <details id="diagWrap" style="margin-top:18px; max-width:360px; width:100%;">
+    <summary style="cursor:pointer; opacity:0.4; font-size:11px; text-align:center; list-style:none; padding:6px;">v16 ⚙️ 開発者用</summary>
+  <div id="diag" style="margin-top:8px; font-size:11px; opacity:0.85; text-align:center; line-height:1.6; color:#5a3a1f; padding: 0 12px;">
     <div id="diagStatus">🟡 接続中…</div>
     <div id="pendingBadge" style="color:#d2691e; font-weight:bold;"></div>
     <div>📡 coupleId: <code id="diagId" style="background:#fff; padding:2px 6px; border-radius:4px; word-break:break-all; display:inline-block; max-width:100%;">-</code></div>
@@ -788,6 +845,7 @@
     </div>
     <a href="https://console.firebase.google.com/project/cinnamon-workout/firestore" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; font-size:11px; color:#5cb6e8; text-decoration:underline;">🔧 Firebaseコンソールで Firestore を確認</a>
   </div>
+  </details>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
