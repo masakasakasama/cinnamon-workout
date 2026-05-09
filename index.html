@@ -932,12 +932,8 @@
   } else {
     applyNames();
     refreshStats();
-    if (!state.her) {
-      setTimeout(() => modal.classList.add('show'), 200);
-    } else {
-      setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
-      cloudLoad();
-    }
+    setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
+    if (state.her) cloudLoad();
   }
 </script>
 </body>
