@@ -242,44 +242,47 @@
 
   .count-row {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
-    justify-content: center;
     width: 100%;
     max-width: 360px;
     margin-bottom: 10px;
     background: #fff;
     border: 2px solid #ffb988;
     border-radius: 14px;
-    padding: 8px 14px;
+    padding: 8px 12px;
   }
   .count-row.hidden { display: none; }
   .count-label {
     font-size: 13px;
     font-weight: bold;
     color: #8b4513;
+    flex-shrink: 0;
   }
-  .count-step {
-    background: #ffe5d0;
-    border: none;
-    border-radius: 50%;
-    width: 34px; height: 34px;
-    font-size: 20px;
-    font-weight: 900;
+  .count-presets {
+    display: flex;
+    gap: 5px;
+    flex: 1;
+  }
+  .count-preset {
+    flex: 1;
+    background: #fff;
+    border: 2px solid #ffd6c2;
+    border-radius: 10px;
+    padding: 8px 4px;
+    font-size: 13px;
+    font-weight: bold;
     color: #8b4513;
     cursor: pointer;
     font-family: inherit;
-    line-height: 1;
   }
-  .count-step:active { transform: translateY(1px); background: #ffd0a8; }
-  .count-value {
-    min-width: 70px;
-    text-align: center;
-    font-size: 20px;
-    font-weight: 900;
-    color: #d2691e;
+  .count-preset:active { transform: translateY(1px); }
+  .count-preset.active {
+    background: #d2691e;
+    border-color: #d2691e;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(210, 105, 30, 0.35);
   }
-  .count-value small { font-size: 13px; opacity: 0.7; margin-left: 2px; }
 
   .speed-row {
     display: flex;
@@ -657,11 +660,9 @@
     <button class="menu-btn full" data-key="burpee" data-mode="reps">🤸 バーピー</button>
   </div>
 
-  <div class="count-row" id="countRow">
-    <span class="count-label" id="countLabel">目標</span>
-    <button class="count-step" data-delta="-5">−</button>
-    <span class="count-value"><span id="countValue">--</span><small id="countUnit"></small></span>
-    <button class="count-step" data-delta="5">+</button>
+  <div class="count-row hidden" id="countRow">
+    <span class="count-label">目標</span>
+    <div class="count-presets" id="countPresets"></div>
   </div>
 
   <div class="speed-row" id="speedRow">
@@ -790,7 +791,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
@@ -839,11 +840,11 @@
         recent: s.recent || [],
         byDay: s.byDay || {},
         speed: s.speed || 'normal',
-        targets: s.targets || { squat:10, pushup:10, situp:15, plank:30, burpee:8 },
+        targets: s.targets || { squat:10, pushup:10, situp:15, plank:30, burpee:10 },
         soundOn: s.soundOn !== false
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:8}, soundOn:true };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:10}, soundOn:true };
     }
   }
   const state = loadState();
@@ -938,61 +939,49 @@
     }
   }
 
-  // 累積値の原子的更新（トランザクション）— 競合してもデータが消えない
+  // 累積値の原子的更新 — Firestore FieldValue.increment + arrayUnion で
+  // ネットワーク的にも軽く、競合しても両方のデータが残る
   async function cloudCommitSession(sess) {
     if (!state.coupleId) return;
     const ref = doc(db, 'couples', state.coupleId);
     const t = sess.date;
     const isReps = sess.mode === 'reps';
+
+    // ローカル即反映（UIがすぐ更新される）
+    if (state.today.date !== t) state.today = { date: t, reps: 0, sec: 0 };
+    if (isReps) { state.today.reps += sess.target; state.total.reps += sess.target; }
+    else        { state.today.sec  += sess.target; state.total.sec  += sess.target; }
+    if (state.lastDate !== t) {
+      state.streak = (state.lastDate === yesterdayStr()) ? state.streak + 1 : 1;
+      state.lastDate = t;
+    }
+    state.byDay = state.byDay || {};
+    state.byDay[t] = state.byDay[t] || {};
+    state.byDay[t][sess.type] = (state.byDay[t][sess.type] || 0) + sess.target;
+    state.byDay[t]._sessions = (state.byDay[t]._sessions || 0) + 1;
+    state.recent = [...(state.recent || []), sess].slice(-50);
+    saveState();
+    refreshStats();
+
+    // クラウドへ原子的に増分更新（多端末でも上書きにならない）
+    const updates = {
+      byDay: { [t]: {
+        [sess.type]: increment(sess.target),
+        _sessions: increment(1)
+      }},
+      lastDate: t,
+      streak: state.streak, // ローカル計算値、最終書き込み勝ち
+      updatedAt: Date.now(),
+      recent: arrayUnion(sess)
+    };
+    if (isReps) updates.total = { reps: increment(sess.target) };
+    else        updates.total = { sec:  increment(sess.target) };
+
     try {
-      await runTransaction(db, async (trx) => {
-        const snap = await trx.get(ref);
-        const cloud = snap.exists() ? snap.data() : {};
-        // 今日のリセット判定
-        let todayReps = cloud.today?.reps || 0;
-        let todaySec  = cloud.today?.sec  || 0;
-        if (cloud.today?.date !== t) { todayReps = 0; todaySec = 0; }
-        if (isReps) todayReps += sess.target;
-        else        todaySec  += sess.target;
-        // ストリーク
-        const yest = yesterdayStr();
-        let streak = cloud.streak || 0;
-        if (cloud.lastDate === t) { /* 既に今日カウント済み */ }
-        else if (cloud.lastDate === yest) streak += 1;
-        else streak = 1;
-        // 累計
-        const total = {
-          reps: (cloud.total?.reps || 0) + (isReps ? sess.target : 0),
-          sec:  (cloud.total?.sec  || 0) + (isReps ? 0 : sess.target)
-        };
-        // byDay
-        const byDay = cloud.byDay || {};
-        byDay[t] = byDay[t] || {};
-        byDay[t][sess.type] = (byDay[t][sess.type] || 0) + sess.target;
-        byDay[t]._sessions = (byDay[t]._sessions || 0) + 1;
-        // recent (最新50件保持)
-        const recent = [...(cloud.recent || []), sess].slice(-50);
-
-        trx.set(ref, {
-          today: { date: t, reps: todayReps, sec: todaySec },
-          total, streak, byDay, recent,
-          lastDate: t,
-          updatedAt: Date.now()
-        }, { merge: true });
-
-        // 反映後の値を呼び出し元のローカルに反映
-        state.today = { date: t, reps: todayReps, sec: todaySec };
-        state.total = total;
-        state.streak = streak;
-        state.byDay = byDay;
-        state.recent = recent;
-        state.lastDate = t;
-      });
-      saveState();
-      refreshStats();
+      await setDoc(ref, updates, { merge: true });
     } catch (e) {
       console.warn('cloudCommitSession failed', e);
-      showToast('クラウド保存に失敗💦');
+      showToast('保存失敗💦 ' + (e.code || e.message || 'unknown'));
     }
   }
 
@@ -1078,18 +1067,44 @@
 
   const speedRow = $('speedRow');
   const countRow = $('countRow');
+  const PRESETS = {
+    squat:  [5, 10, 15, 20],
+    pushup: [5, 10, 15, 20],
+    situp:  [5, 10, 15, 20],
+    burpee: [5, 10, 15, 20],
+    plank:  [15, 30, 45, 60]
+  };
   function refreshCountUI() {
     if (!selected) {
       countRow.classList.add('hidden');
       return;
     }
     countRow.classList.remove('hidden');
-    const t = state.targets[selected.key];
-    selected.target = t;
-    $('countValue').textContent = t;
-    $('countUnit').textContent = EX_UNIT[selected.key] || '';
-    counterLabel.textContent = `${EX_ICON[selected.key]} ${EX_LABEL[selected.key]} ${t}${EX_UNIT[selected.key]} 準備OK`;
-    counter.textContent = selected.mode === 'time' ? t + '秒' : '0 / ' + t;
+    const presets = PRESETS[selected.key] || [5, 10, 15, 20];
+    let cur = state.targets[selected.key] || presets[1];
+    if (!presets.includes(cur)) {
+      // 最も近いプリセットに丸める
+      cur = presets.reduce((best, v) => Math.abs(v - cur) < Math.abs(best - cur) ? v : best, presets[0]);
+      state.targets[selected.key] = cur;
+    }
+    selected.target = cur;
+    const unit = EX_UNIT[selected.key] || '';
+    $('countPresets').innerHTML = presets.map(v =>
+      `<button type="button" class="count-preset${v === cur ? ' active' : ''}" data-val="${v}">${v}${unit}</button>`
+    ).join('');
+    $('countPresets').querySelectorAll('.count-preset').forEach(b => {
+      b.addEventListener('click', () => {
+        if (running) return;
+        const v = parseInt(b.dataset.val, 10);
+        state.targets[selected.key] = v;
+        selected.target = v;
+        saveState();
+        cloudSavePartial({ targets: state.targets });
+        refreshCountUI();
+      });
+    });
+    counterLabel.textContent = `${EX_ICON[selected.key]} ${EX_LABEL[selected.key]} ${cur}${unit} 準備OK`;
+    counter.textContent = selected.mode === 'time' ? cur + '秒' : '0 / ' + cur;
   }
   menuBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1113,19 +1128,6 @@
     });
   });
 
-  // 回数 -/+ ボタン
-  document.querySelectorAll('.count-step').forEach(b => {
-    b.addEventListener('click', () => {
-      if (running || !selected) return;
-      const delta = parseInt(b.dataset.delta, 10);
-      const cur = state.targets[selected.key] || 0;
-      const next = Math.max(5, Math.min(999, cur + delta));
-      state.targets[selected.key] = next;
-      saveState();
-      cloudSave();
-      refreshCountUI();
-    });
-  });
 
   // ===== speed selector =====
   const SPEED_MULT = { slow: 2.2, normal: 1.0, fast: 0.65 };
@@ -1223,6 +1225,7 @@
     counter.textContent = '--';
     startBtn.disabled = true;
     setAnim('idle');
+    countRow.classList.add('hidden');
     showSpeech(`${n()}、またね〜`, 1500);
   });
 
