@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v19">
+<html lang="ja" data-app-version="v20">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -351,6 +351,19 @@
     color: #fff;
     box-shadow: 0 2px 6px rgba(210, 105, 30, 0.35);
   }
+  #countCustom {
+    width: 56px;
+    padding: 7px 6px;
+    border: 1.5px dashed #ffb988;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    color: #d2691e;
+    background: #fffaf3;
+  }
+  #countCustom:focus { outline: none; border-color: #d2691e; }
 
   .speed-row {
     display: flex;
@@ -618,6 +631,18 @@
     font-family: inherit;
     font-size: 13px;
     text-align: center;
+  }
+  .day-edit-cell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+  .day-edit-cell .cell-tag {
+    font-size: 9px;
+    color: #b8682f;
+    font-weight: bold;
+    letter-spacing: 0.5px;
   }
   .day-edit-out {
     margin-left: auto;
@@ -934,15 +959,16 @@
 
   <div class="controls">
     <button class="menu-btn" data-key="squat" data-mode="reps">🦵 スクワット</button>
-    <button class="menu-btn" data-key="pushup" data-mode="reps">💪 腕立て</button>
     <button class="menu-btn" data-key="situp" data-mode="reps">🤰 腹筋</button>
+    <button class="menu-btn" data-key="burpee" data-mode="reps">🤸 バーピー</button>
     <button class="menu-btn" data-key="plank" data-mode="time">🧘 プランク</button>
-    <button class="menu-btn full" data-key="burpee" data-mode="reps">🤸 バーピー</button>
   </div>
 
   <div class="count-row hidden" id="countRow">
     <span class="count-label">目標</span>
     <div class="count-presets" id="countPresets"></div>
+    <input id="countCustom" type="number" min="1" max="999" inputmode="numeric" placeholder="自由">
+    <span id="countCustomUnit" style="font-size:11px; color:#b8682f;">回</span>
   </div>
 
   <div class="speed-row" id="speedRow">
@@ -1053,7 +1079,7 @@
 
   <div class="toast" id="toast"></div>
   <details id="diagWrap" style="margin-top:18px; max-width:360px; width:100%;">
-    <summary style="cursor:pointer; opacity:0.4; font-size:11px; text-align:center; list-style:none; padding:6px;">v16 ⚙️ 開発者用</summary>
+    <summary id="diagSummary" style="cursor:pointer; opacity:0.4; font-size:11px; text-align:center; list-style:none; padding:6px;">⚙️ 開発者用</summary>
   <div id="diag" style="margin-top:8px; font-size:11px; opacity:0.85; text-align:center; line-height:1.6; color:#5a3a1f; padding: 0 12px;">
     <div id="diagStatus">🟡 接続中…</div>
     <div id="pendingBadge" style="color:#d2691e; font-weight:bold;"></div>
@@ -1124,13 +1150,13 @@
         recent: s.recent || [],
         byDay: s.byDay || {},
         speed: s.speed || 'normal',
-        targets: s.targets || { squat:10, pushup:10, situp:15, plank:30, burpee:10 },
+        targets: s.targets || { squat:10, situp:15, plank:30, burpee:10 },
         soundOn: s.soundOn !== false,
         pendingSessions: s.pendingSessions || [],
         character: s.character || 'cinnamon'
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,pushup:10,situp:15,plank:30,burpee:10}, soundOn:true, pendingSessions:[], character:'cinnamon' };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,situp:15,plank:30,burpee:10}, soundOn:true, pendingSessions:[], character:'cinnamon' };
     }
   }
   const state = loadState();
@@ -1462,7 +1488,6 @@
   const countRow = $('countRow');
   const PRESETS = {
     squat:  [5, 10, 15, 20],
-    pushup: [5, 10, 15, 20],
     situp:  [5, 10, 15, 20],
     burpee: [5, 10, 15, 20],
     plank:  [15, 30, 45, 60]
@@ -1474,12 +1499,7 @@
     }
     countRow.classList.remove('hidden');
     const presets = PRESETS[selected.key] || [5, 10, 15, 20];
-    let cur = state.targets[selected.key] || presets[1];
-    if (!presets.includes(cur)) {
-      // 最も近いプリセットに丸める
-      cur = presets.reduce((best, v) => Math.abs(v - cur) < Math.abs(best - cur) ? v : best, presets[0]);
-      state.targets[selected.key] = cur;
-    }
+    const cur = state.targets[selected.key] || presets[1];
     selected.target = cur;
     const unit = EX_UNIT[selected.key] || '';
     $('countPresets').innerHTML = presets.map(v =>
@@ -1496,9 +1516,23 @@
         refreshCountUI();
       });
     });
+    // カスタム入力欄: プリセット外の値の時は表示、プリセット内なら空
+    $('countCustom').value = presets.includes(cur) ? '' : cur;
+    $('countCustomUnit').textContent = unit;
     counterLabel.textContent = `${EX_ICON[selected.key]} ${EX_LABEL[selected.key]} ${cur}${unit} 準備OK`;
     counter.textContent = selected.mode === 'time' ? cur + '秒' : '0 / ' + cur;
   }
+  $('countCustom').addEventListener('change', () => {
+    if (running || !selected) return;
+    const v = parseInt($('countCustom').value, 10);
+    if (!v || v < 1) return;
+    const clamped = Math.max(1, Math.min(999, v));
+    state.targets[selected.key] = clamped;
+    selected.target = clamped;
+    saveState();
+    cloudSavePartial({ targets: state.targets });
+    refreshCountUI();
+  });
   menuBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       if (running) return;
@@ -1788,12 +1822,12 @@
     if (hr < 24) return hr + '時間前';
     return Math.floor(hr / 24) + '日前';
   }
-  const EX_LABEL = { squat: 'スクワット', pushup: '腕立て', situp: '腹筋', plank: 'プランク', burpee: 'バーピー' };
-  const EX_ICON  = { squat: '🦵', pushup: '💪', situp: '🤰', plank: '🧘', burpee: '🤸' };
-  const EX_UNIT  = { squat: '回', pushup: '回', situp: '回', plank: '秒', burpee: '回' };
-  const EX_ORDER = ['squat', 'pushup', 'situp', 'burpee', 'plank'];
+  const EX_LABEL = { squat: 'スクワット', situp: '腹筋', plank: 'プランク', burpee: 'バーピー' };
+  const EX_ICON  = { squat: '🦵', situp: '🤰', plank: '🧘', burpee: '🤸' };
+  const EX_UNIT  = { squat: '回', situp: '回', plank: '秒', burpee: '回' };
+  const EX_ORDER = ['squat', 'situp', 'burpee', 'plank'];
   // 推定消費カロリー (kcal per rep/sec, 体重50kg目安)
-  const CAL_PER = { squat: 0.32, pushup: 0.36, situp: 0.27, burpee: 1.43, plank: 0.05 };
+  const CAL_PER = { squat: 0.32, situp: 0.27, burpee: 1.43, plank: 0.05 };
   function calForType(type, value) {
     return Math.round((CAL_PER[type] || 0) * value * 10) / 10;
   }
@@ -1937,10 +1971,15 @@
       return `
         <div class="day-edit-row">
           <span class="day-edit-label">${EX_ICON[t]} ${EX_LABEL[t]}</span>
-          <input type="number" class="day-edit-sets" data-type="${t}" min="0" inputmode="numeric" value="${sets}" placeholder="セ">
+          <span class="day-edit-cell">
+            <input type="number" class="day-edit-sets" data-type="${t}" min="0" inputmode="numeric" value="${sets}">
+            <span class="cell-tag">セット</span>
+          </span>
           <span style="opacity:0.5;">×</span>
-          <input type="number" class="day-edit-reps" data-type="${t}" min="0" inputmode="numeric" value="${reps}" placeholder="${EX_UNIT[t]}">
-          <span style="font-size:11px; opacity:0.6;">${EX_UNIT[t]}</span>
+          <span class="day-edit-cell">
+            <input type="number" class="day-edit-reps" data-type="${t}" min="0" inputmode="numeric" value="${reps}">
+            <span class="cell-tag">${EX_UNIT[t]}</span>
+          </span>
           <span class="day-edit-out" data-type="${t}">= 0${EX_UNIT[t]}</span>
         </div>`;
     }).join('');
@@ -2051,6 +2090,7 @@
 
   // ===== auto-update check =====
   const APP_VERSION = document.documentElement.dataset.appVersion;
+  $('diagSummary').textContent = APP_VERSION + ' ⚙️ 開発者用';
   $('diagId').textContent = COUPLE_ID;
   $('diagId').addEventListener('click', () => {
     navigator.clipboard?.writeText(COUPLE_ID).then(() => showToast('IDをコピーしたよ'));
