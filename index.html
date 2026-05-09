@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v23">
+<html lang="ja" data-app-version="v24">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -438,6 +438,24 @@
     margin-bottom: 10px;
     border: 1.5px solid rgba(255, 200, 220, 0.5);
   }
+  .stats-section { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ffd6e7; }
+  .stats-section-title { font-size: 11px; color: #aaa; margin-bottom: 6px; font-weight: bold; letter-spacing: 0.5px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .stat-cell {
+    text-align: center;
+    background: #fff5fa;
+    border-radius: 10px;
+    padding: 6px 2px;
+    font-size: 11px;
+    color: #888;
+    line-height: 1.1;
+  }
+  .stat-cell b { display: block; color: #ff7eb9; font-size: 17px; font-weight: 900; margin: 2px 0 0; }
+  .stat-cell small { font-size: 10px; opacity: 0.6; }
   .stats-row {
     display: flex;
     justify-content: space-between;
@@ -1032,13 +1050,13 @@
       <span>連続記録</span>
       <span class="streak">🔥 <span id="streak">0</span>日</span>
     </div>
-    <div class="stats-row">
-      <span>今日の合計</span>
-      <span><b id="todayReps">0</b>回 / <b id="todaySec">0</b>秒</span>
+    <div class="stats-section">
+      <div class="stats-section-title">きょう</div>
+      <div class="stats-grid" id="todayStats"></div>
     </div>
-    <div class="stats-row">
-      <span>これまでの合計</span>
-      <span><b id="totalReps">0</b>回 / <b id="totalSec">0</b>秒</span>
+    <div class="stats-section">
+      <div class="stats-section-title">これまで</div>
+      <div class="stats-grid" id="totalStats"></div>
     </div>
   </div>
   </section>
@@ -1247,16 +1265,24 @@
   function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function refreshStats() {
-    const safeNum = (v) => Number.isFinite(v) ? v : 0;
-    // 念のためここでも NaN を 0 に補正
-    if (!Number.isFinite(state.total.reps)) state.total.reps = 0;
-    if (!Number.isFinite(state.total.sec))  state.total.sec  = 0;
-    $('streak').textContent = safeNum(state.streak);
-    const td = todayFromByDay(state.byDay);
-    $('todayReps').textContent = safeNum(td.reps);
-    $('todaySec').textContent  = safeNum(td.sec);
-    $('totalReps').textContent = safeNum(state.total.reps);
-    $('totalSec').textContent  = safeNum(state.total.sec);
+    const safe = (v) => Number.isFinite(v) ? v : 0;
+    $('streak').textContent = safe(state.streak);
+
+    const t = todayStr();
+    const tdy = (state.byDay && state.byDay[t]) || {};
+    const renderBlock = (src) => EX_ORDER.map(typ => {
+      const v = safe(src[typ] || 0);
+      return `<div class="stat-cell">${EX_ICON[typ]}<b>${v}</b><small>${EX_UNIT[typ]}</small></div>`;
+    }).join('');
+    $('todayStats').innerHTML = renderBlock(tdy);
+
+    // 累計は byDay 全日分の合算 (種目別)
+    const acc = {};
+    EX_ORDER.forEach(typ => acc[typ] = 0);
+    Object.values(state.byDay || {}).forEach(day => {
+      EX_ORDER.forEach(typ => acc[typ] += day[typ] || 0);
+    });
+    $('totalStats').innerHTML = renderBlock(acc);
   }
   function todayFromByDay(byDay) {
     const t = todayStr();
