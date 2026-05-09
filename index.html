@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シナモンロールと筋トレ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: linear-gradient(135deg, #ffe5d9 0%, #ffcab1 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #5a3a1f;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+    text-shadow: 2px 2px 0 #fff;
+  }
+  .subtitle { font-size: 14px; margin-bottom: 20px; opacity: 0.7; }
+
+  .stage {
+    width: 320px;
+    height: 280px;
+    background: linear-gradient(180deg, #fff7f0 0%, #ffe0c7 100%);
+    border-radius: 24px;
+    border: 4px solid #fff;
+    box-shadow: 0 10px 30px rgba(180, 100, 50, 0.2);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .ground {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 30px;
+    background: linear-gradient(180deg, #d4a574 0%, #a87042 100%);
+  }
+
+  .roll {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    height: 140px;
+    transition: transform 0.3s ease;
+  }
+  .roll svg { width: 100%; height: 100%; display: block; }
+
+  /* squat: scale down */
+  .roll.squat { animation: squat 1.2s ease-in-out infinite; }
+  @keyframes squat {
+    0%, 100% { transform: translateX(-50%) scaleY(1); }
+    50% { transform: translateX(-50%) scaleY(0.65) translateY(20px); }
+  }
+  /* pushup: tilt forward */
+  .roll.pushup { animation: pushup 1.2s ease-in-out infinite; transform-origin: bottom center; }
+  @keyframes pushup {
+    0%, 100% { transform: translateX(-50%) rotate(-8deg); }
+    50% { transform: translateX(-50%) rotate(-8deg) translateY(15px) scaleY(0.9); }
+  }
+  /* plank: lay flat */
+  .roll.plank { transform: translateX(-50%) rotate(-90deg) translateY(-20px); animation: plankShake 0.4s ease-in-out infinite; }
+  @keyframes plankShake {
+    0%, 100% { transform: translateX(-50%) rotate(-90deg) translateY(-20px); }
+    50% { transform: translateX(-50%) rotate(-88deg) translateY(-19px); }
+  }
+  /* burpee: jump */
+  .roll.burpee { animation: burpee 0.9s ease-in-out infinite; }
+  @keyframes burpee {
+    0%, 100% { transform: translateX(-50%) translateY(0) scaleY(1); }
+    25% { transform: translateX(-50%) translateY(20px) scaleY(0.6); }
+    50% { transform: translateX(-50%) translateY(-40px) scaleY(1.1); }
+    75% { transform: translateX(-50%) translateY(20px) scaleY(0.6); }
+  }
+  /* idle */
+  .roll.idle { animation: idle 2.5s ease-in-out infinite; }
+  @keyframes idle {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-6px); }
+  }
+
+  .speech {
+    position: absolute;
+    top: 16px; left: 16px;
+    background: #fff;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    max-width: 60%;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .speech.show { opacity: 1; }
+  .speech::after {
+    content: '';
+    position: absolute;
+    bottom: -8px; left: 24px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid #fff;
+  }
+
+  .counter {
+    font-size: 56px;
+    font-weight: 900;
+    color: #d2691e;
+    text-shadow: 3px 3px 0 #fff;
+    margin: 8px 0;
+    min-height: 70px;
+    line-height: 1;
+  }
+  .counter-label { font-size: 14px; opacity: 0.7; margin-bottom: 10px; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 320px;
+    margin-bottom: 14px;
+  }
+  .menu-btn {
+    background: #fff;
+    border: 3px solid #ffb988;
+    border-radius: 16px;
+    padding: 14px 8px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #8b4513;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .menu-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .menu-btn.active {
+    background: #d2691e;
+    color: #fff;
+    border-color: #d2691e;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    width: 320px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 16px;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .start-btn { background: #d2691e; color: #fff; }
+  .start-btn:hover { background: #b8590f; }
+  .start-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .stop-btn { background: #fff; color: #d2691e; border: 3px solid #d2691e; }
+
+  .stats {
+    margin-top: 16px;
+    font-size: 13px;
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+</style>
+</head>
+<body>
+  <h1>シナモンロールと筋トレ</h1>
+  <p class="subtitle">一緒にがんばろう！</p>
+
+  <div class="stage">
+    <div class="speech" id="speech">いっしょにやろ〜！</div>
+    <div class="roll idle" id="roll">
+      <svg viewBox="0 0 100 100">
+        <!-- shadow -->
+        <ellipse cx="50" cy="92" rx="32" ry="4" fill="rgba(0,0,0,0.15)"/>
+        <!-- main roll body -->
+        <circle cx="50" cy="55" r="38" fill="#e8b88a" stroke="#a87042" stroke-width="2"/>
+        <!-- spiral -->
+        <path d="M 50 55 m -28 0 a 28 28 0 1 1 56 0 a 22 22 0 1 0 -44 0 a 16 16 0 1 1 32 0 a 10 10 0 1 0 -20 0 a 4 4 0 1 1 8 0"
+              fill="none" stroke="#a87042" stroke-width="3" stroke-linecap="round"/>
+        <!-- icing drip -->
+        <path d="M 22 50 Q 28 60 24 68 Q 36 64 40 72 Q 50 66 56 74 Q 66 64 72 70 Q 78 60 78 50 Z"
+              fill="#fff8f0" opacity="0.85"/>
+        <!-- eyes -->
+        <ellipse cx="40" cy="52" rx="3" ry="4" fill="#3a2418"/>
+        <ellipse cx="60" cy="52" rx="3" ry="4" fill="#3a2418"/>
+        <circle cx="41" cy="50.5" r="1" fill="#fff"/>
+        <circle cx="61" cy="50.5" r="1" fill="#fff"/>
+        <!-- cheeks -->
+        <circle cx="33" cy="60" r="3.5" fill="#ff9a8b" opacity="0.6"/>
+        <circle cx="67" cy="60" r="3.5" fill="#ff9a8b" opacity="0.6"/>
+        <!-- mouth -->
+        <path d="M 45 62 Q 50 66 55 62" fill="none" stroke="#3a2418" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="ground"></div>
+  </div>
+
+  <div class="counter-label" id="counterLabel">メニューをえらんでね</div>
+  <div class="counter" id="counter">--</div>
+
+  <div class="controls">
+    <button class="menu-btn" data-key="squat" data-target="10" data-mode="reps">スクワット 10回</button>
+    <button class="menu-btn" data-key="pushup" data-target="10" data-mode="reps">腕立て 10回</button>
+    <button class="menu-btn" data-key="plank" data-target="30" data-mode="time">プランク 30秒</button>
+    <button class="menu-btn" data-key="burpee" data-target="8" data-mode="reps">バーピー 8回</button>
+  </div>
+
+  <div class="action-row">
+    <button class="action-btn start-btn" id="startBtn" disabled>スタート</button>
+    <button class="action-btn stop-btn" id="resetBtn">リセット</button>
+  </div>
+
+  <div class="stats" id="stats">今日の合計: 0回 / 0秒</div>
+
+<script>
+  const roll = document.getElementById('roll');
+  const speech = document.getElementById('speech');
+  const counter = document.getElementById('counter');
+  const counterLabel = document.getElementById('counterLabel');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const stats = document.getElementById('stats');
+  const menuBtns = document.querySelectorAll('.menu-btn');
+
+  const cheers = {
+    start: ['いくよ〜！', 'ファイト！', 'いっしょにがんばろ！', 'よーい、スタート！'],
+    mid: ['その調子！', 'いいぞ〜', 'もうちょい！', 'がんばれ〜', 'ナイスっ！'],
+    end: ['やったね！', 'おつかれさま〜', 'かんぺき！', 'えらい！えらい！']
+  };
+
+  let selected = null;
+  let running = false;
+  let count = 0;
+  let timerId = null;
+  let totalReps = 0;
+  let totalSec = 0;
+
+  function showSpeech(text, dur = 1800) {
+    speech.textContent = text;
+    speech.classList.add('show');
+    clearTimeout(showSpeech._t);
+    showSpeech._t = setTimeout(() => speech.classList.remove('show'), dur);
+  }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function setAnimation(name) {
+    roll.className = 'roll ' + name;
+  }
+
+  menuBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (running) return;
+      menuBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selected = {
+        key: btn.dataset.key,
+        target: parseInt(btn.dataset.target, 10),
+        mode: btn.dataset.mode,
+        label: btn.textContent
+      };
+      counterLabel.textContent = selected.label + ' 準備OK';
+      counter.textContent = selected.mode === 'time' ? selected.target + '秒' : '0 / ' + selected.target;
+      startBtn.disabled = false;
+      setAnimation(selected.key);
+      showSpeech('やる気まんまん！', 1500);
+    });
+  });
+
+  function finish(success) {
+    running = false;
+    clearInterval(timerId);
+    timerId = null;
+    setAnimation('idle');
+    startBtn.textContent = 'スタート';
+    if (success) {
+      showSpeech(pick(cheers.end), 2500);
+      if (selected.mode === 'reps') totalReps += selected.target;
+      else totalSec += selected.target;
+      stats.textContent = `今日の合計: ${totalReps}回 / ${totalSec}秒`;
+    }
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (!selected) return;
+    if (running) {
+      finish(false);
+      return;
+    }
+    running = true;
+    count = 0;
+    startBtn.textContent = 'やめる';
+    setAnimation(selected.key);
+    showSpeech(pick(cheers.start), 1500);
+
+    if (selected.mode === 'reps') {
+      const interval = selected.key === 'burpee' ? 900 : 1200;
+      counter.textContent = '0 / ' + selected.target;
+      timerId = setInterval(() => {
+        count++;
+        counter.textContent = count + ' / ' + selected.target;
+        if (count === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid), 1400);
+        if (count >= selected.target) finish(true);
+      }, interval);
+    } else {
+      let remain = selected.target;
+      counter.textContent = remain + '秒';
+      timerId = setInterval(() => {
+        remain--;
+        counter.textContent = remain + '秒';
+        if (remain === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid), 1400);
+        if (remain <= 0) finish(true);
+      }, 1000);
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (running) finish(false);
+    selected = null;
+    menuBtns.forEach(b => b.classList.remove('active'));
+    counterLabel.textContent = 'メニューをえらんでね';
+    counter.textContent = '--';
+    startBtn.disabled = true;
+    setAnimation('idle');
+    showSpeech('またやろうね〜', 1500);
+  });
+
+  setTimeout(() => showSpeech('いっしょにやろ〜！', 2500), 400);
+</script>
+</body>
+</html>
