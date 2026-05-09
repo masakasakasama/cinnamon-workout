@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v20">
+<html lang="ja" data-app-version="v21">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1463,10 +1463,46 @@
     o.start(t0);
     o.stop(t0 + dur/1000);
   }
+  // 音階定義
+  const NOTES = { C5: 523, D5: 587, E5: 659, F5: 698, G5: 784, A5: 880, C6: 1047, D6: 1175, E6: 1319, G6: 1568, C7: 2093 };
+  const TICK_SCALE = [NOTES.C5, NOTES.E5, NOTES.G5, NOTES.A5, NOTES.G5, NOTES.E5];
+  // 各レップ毎にスケール上のノートを順番に鳴らす（飽きない）
+  function tick(count) {
+    if (!state.soundOn || !audioCtx) return;
+    const note = TICK_SCALE[count % TICK_SCALE.length];
+    beep(note, 80, 'triangle', 0.18);
+  }
+  // 半分到達時のチャイム（ど〜らん）
+  function midCheer() {
+    if (!state.soundOn) return;
+    ensureAudio();
+    beep(NOTES.E6, 90, 'sine', 0.22);
+    setTimeout(() => beep(NOTES.G6, 130, 'sine', 0.24), 100);
+  }
+  // 完了時のかわいいファンファーレ
   function successMelody() {
     if (!state.soundOn) return;
-    const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
-    notes.forEach((f, i) => setTimeout(() => beep(f, 180, 'triangle', 0.25), i * 120));
+    ensureAudio();
+    if (!audioCtx) return;
+    const seq = [
+      [NOTES.C5, 100], [NOTES.E5, 100], [NOTES.G5, 100],
+      [NOTES.C6, 130], [NOTES.E6, 130],
+      [NOTES.G6, 280]
+    ];
+    let t = 0;
+    seq.forEach(([f, dur]) => {
+      setTimeout(() => beep(f, dur, 'triangle', 0.24), t);
+      t += dur * 0.75;
+    });
+    // 最後にきらっとした倍音
+    setTimeout(() => beep(NOTES.C7, 200, 'sine', 0.18), t + 60);
+  }
+  // プランクのカウントダウン: 残数に応じて段々高く
+  function countdownBeep(remain) {
+    if (!state.soundOn) return;
+    ensureAudio();
+    const f = 800 + (4 - remain) * 220;
+    beep(f, 110, 'sine', 0.22);
   }
   const soundBtn = $('soundBtn');
   function refreshSoundUI() { soundBtn.textContent = state.soundOn ? '🔊' : '🔇'; }
@@ -1474,7 +1510,7 @@
     state.soundOn = !state.soundOn;
     saveState();
     refreshSoundUI();
-    if (state.soundOn) { ensureAudio(); beep(900, 80); }
+    if (state.soundOn) { ensureAudio(); playHappy(); }
   });
   refreshSoundUI();
 
@@ -1597,7 +1633,11 @@
     if (!state.soundOn) return;
     ensureAudio();
     if (!audioCtx) return;
-    [880, 1320, 1760].forEach((f, i) => setTimeout(() => beep(f, 90, 'triangle', 0.22), i * 80));
+    // ぴょんぴょん上昇 (kyu-kyu-kyu)
+    beep(NOTES.A5, 60, 'sine', 0.18);
+    setTimeout(() => beep(NOTES.E6, 70, 'sine', 0.20), 70);
+    setTimeout(() => beep(NOTES.A5, 60, 'sine', 0.18), 140);
+    setTimeout(() => beep(NOTES.G6, 100, 'sine', 0.22), 200);
   }
 
   // タップで嬉しがる
@@ -1660,10 +1700,10 @@
       timerId = setInterval(() => {
         count++;
         counter.textContent = count + ' / ' + selected.target;
-        beep(700, 60, 'sine', 0.18); // 各回のビート
+        tick(count); // スケール上のノートを順に鳴らす
         if (count === Math.floor(selected.target / 2)) {
           showSpeech(pick(cheers.mid()), 1400);
-          beep(1100, 120, 'triangle', 0.25);
+          midCheer();
         }
         if (count >= selected.target) finish(true);
       }, interval);
@@ -1673,9 +1713,11 @@
       timerId = setInterval(() => {
         remain--;
         counter.textContent = remain + '秒';
-        // 残り3秒からカウントダウン音、それ以外は静か
-        if (remain > 0 && remain <= 3) beep(900, 80, 'sine', 0.22);
-        if (remain === Math.floor(selected.target / 2)) showSpeech(pick(cheers.mid()), 1400);
+        if (remain > 0 && remain <= 3) countdownBeep(remain);
+        if (remain === Math.floor(selected.target / 2)) {
+          showSpeech(pick(cheers.mid()), 1400);
+          midCheer();
+        }
         if (remain <= 0) finish(true);
       }, 1000);
     }
