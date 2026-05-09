@@ -354,19 +354,7 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* ===== dashboard (view mode) ===== */
-  .dashboard { display: none; width: 100%; max-width: 360px; }
-  body.view-mode .dashboard { display: block; }
-  body.view-mode .stage,
-  body.view-mode .counter-label,
-  body.view-mode .counter,
-  body.view-mode .controls,
-  body.view-mode .speed-row,
-  body.view-mode .action-row,
-  body.view-mode .stats-card,
-  body.view-mode .footer-row,
-  body.view-mode .love-note { display: none !important; }
-
+  /* ===== stats card layout ===== */
   .dash-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -420,12 +408,118 @@
   .day-empty { text-align: center; opacity: 0.6; font-style: italic; padding: 16px 0; }
   .dash-update { font-size: 11px; opacity: 0.55; text-align: right; margin: 4px 4px 12px; }
   .dash-status { font-size: 12px; opacity: 0.7; text-align: center; margin: 6px 0; }
+
+  /* ===== tabs / sections ===== */
+  body { padding-bottom: 76px; } /* leave room for tab-bar */
+  .tab-content { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; }
+  .tab-content[hidden] { display: none; }
+  .tab-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    z-index: 50;
+    padding: 7px 12px calc(7px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+  }
+  .tab-bar-inner { display: flex; gap: 4px; max-width: 360px; width: 100%; }
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 9px 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #88a;
+    cursor: pointer;
+    border-radius: 12px;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tab-btn.active {
+    background: #5cb6e8;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(92,182,232,0.35);
+  }
+
+  /* ===== chart ===== */
+  .chart-card {
+    width: 100%;
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 10px;
+  }
+  .chart-card h3 {
+    font-size: 14px; color: #4a7ba8;
+    margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .chart-card h3 small { font-weight: normal; opacity: 0.6; font-size: 11px; }
+  .chart-svg { width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; gap: 12px; font-size: 11px; opacity: 0.75; margin-top: 6px; }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+
+  /* ===== edit form ===== */
+  .edit-card {
+    width: 100%;
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 10px;
+  }
+  .edit-card h3 { font-size: 14px; color: #4a7ba8; margin-bottom: 10px; }
+  .edit-row { display: grid; grid-template-columns: 1fr 130px; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .edit-row label { font-size: 13px; color: #5a3a1f; }
+  .edit-row input {
+    padding: 9px 11px;
+    border: 2px solid #cfe3f5;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: #5a3a1f;
+    background: #fff;
+    outline: none;
+    width: 100%;
+  }
+  .edit-row input:focus { border-color: #5cb6e8; }
+  .edit-card textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border: 2px solid #cfe3f5;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: #5a3a1f;
+    background: #fff;
+    outline: none;
+    resize: none;
+  }
+  .save-btn-wide {
+    width: 100%;
+    background: #5cb6e8;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .save-btn-wide:active { transform: translateY(1px); }
+  .save-btn-wide.warn { background: #ff8aa3; }
 </style>
 </head>
 <body>
   <h1>シナモンロールと筋トレ 💕</h1>
   <p class="subtitle" id="subtitle">いっしょにがんばろう！</p>
 
+  <section class="tab-content" id="tabHome">
   <div class="love-note hidden" id="loveNote">
     <span id="loveText"></span>
     <span class="from" id="loveFrom"></span>
@@ -520,15 +614,11 @@
       <span><b id="totalReps">0</b>回 / <b id="totalSec">0</b>秒</span>
     </div>
   </div>
+  </section>
 
-  <div class="footer-row">
-    <button class="text-btn" id="setupBtn">✏️ メッセージを編集</button>
-    <button class="text-btn" id="dashBtn">👀 がんばりを見る</button>
-  </div>
-
-  <!-- dashboard for boyfriend (view mode) -->
-  <div class="dashboard" id="dashboard">
-    <h2 id="dashName" style="text-align:center; font-size:22px; margin-bottom:4px; color:#d2691e;">きみのがんばり</h2>
+  <!-- ===== STATS / きろく TAB ===== -->
+  <section class="tab-content" id="tabStats" hidden>
+    <h2 id="dashName" style="text-align:center; font-size:22px; margin-bottom:4px; color:#4a7ba8;">きろく</h2>
     <div class="dash-status" id="dashStatus">読み込み中…</div>
 
     <div class="dash-grid">
@@ -552,34 +642,80 @@
         <div class="label">これまでの秒数</div>
         <div class="dash-big"><span id="dashTotalSec">0</span><small>秒</small></div>
       </div>
-      <div class="dash-card full">
-        <div class="label">最近のがんばり</div>
-        <div class="dash-daily" id="dashRecent"><div class="day-empty">読み込み中…</div></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>📊 直近14日の回数 <small>(タップで秒数も)</small></h3>
+      <div id="chart"></div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:#d2691e"></span>回数</span>
+        <span><span class="legend-dot" style="background:#5cb6e8"></span>秒数(プランク)</span>
       </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>📅 日ごとの記録</h3>
+      <div class="dash-daily" id="dashRecent"><div class="day-empty">読み込み中…</div></div>
     </div>
     <div class="dash-update" id="dashUpdate">—</div>
-    <button class="text-btn" id="dashBackBtn" style="width:100%;">← アプリに戻る</button>
-  </div>
+  </section>
 
-  <!-- setup modal: for the boyfriend to configure before sending -->
-  <div class="modal-bg" id="modal">
-    <div class="modal">
-      <h2 id="modalTitle">彼女に送る準備 💌</h2>
-      <p class="note" id="modalNote">名前と応援メッセージを入れて、共有リンクを彼女に送ってね</p>
-      <div class="input-row">
+  <!-- ===== EDIT / 編集 TAB ===== -->
+  <section class="tab-content" id="tabEdit" hidden>
+    <div class="edit-card">
+      <h3>💕 名前・応援メッセージ</h3>
+      <div class="edit-row">
         <label>🥐 彼女の名前</label>
         <input id="inputHer" type="text" placeholder="ななちゃん" maxlength="14">
-        <label>💕 自分の名前（応援する人）</label>
-        <input id="inputMe" type="text" placeholder="あなた" maxlength="14">
-        <label>📝 応援メッセージ（任意）</label>
-        <textarea id="inputMsg" rows="3" placeholder="きょうもがんばってね！むりしないでね💗" maxlength="80"></textarea>
       </div>
-      <button class="action-btn start-btn" id="saveBtn" style="width:100%">けってい！</button>
+      <div class="edit-row">
+        <label>💕 自分の名前</label>
+        <input id="inputMe" type="text" placeholder="あなた" maxlength="14">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:13px; color:#5a3a1f;">📝 応援メッセージ</label>
+        <textarea id="inputMsg" rows="3" placeholder="きょうもがんばってね♡" maxlength="80" style="margin-top:6px;"></textarea>
+      </div>
+      <button class="save-btn-wide" id="saveBtn">名前・メッセージを保存</button>
     </div>
-  </div>
+
+    <div class="edit-card">
+      <h3>📊 これまでの合計を編集</h3>
+      <p style="font-size:12px; opacity:0.7; margin-bottom:10px;">アプリ前にやってた分を足したい時とか</p>
+      <div class="edit-row">
+        <label>🔥 連続記録 (日)</label>
+        <input id="editStreak" type="number" min="0" inputmode="numeric">
+      </div>
+      <div class="edit-row">
+        <label>今日の回数</label>
+        <input id="editTodayReps" type="number" min="0" inputmode="numeric">
+      </div>
+      <div class="edit-row">
+        <label>今日の秒数</label>
+        <input id="editTodaySec" type="number" min="0" inputmode="numeric">
+      </div>
+      <div class="edit-row">
+        <label>これまでの回数</label>
+        <input id="editTotalReps" type="number" min="0" inputmode="numeric">
+      </div>
+      <div class="edit-row">
+        <label>これまでの秒数</label>
+        <input id="editTotalSec" type="number" min="0" inputmode="numeric">
+      </div>
+      <button class="save-btn-wide" id="saveTotalsBtn">合計を保存</button>
+    </div>
+  </section>
+
+  <nav class="tab-bar" id="tabBar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" data-tab="home">🥐 筋トレ</button>
+      <button class="tab-btn" data-tab="stats">📊 きろく</button>
+      <button class="tab-btn" data-tab="edit">✏️ 編集</button>
+    </div>
+  </nav>
 
   <div class="toast" id="toast"></div>
-  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v3 — 速さ切替</div>
+  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v4 — タブ・グラフ・編集</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -912,58 +1048,73 @@
     showSpeech(`${n()}、またね〜`, 1500);
   });
 
-  // ===== setup modal & share =====
-  const modal = $('modal');
+  // ===== edit forms =====
   const inputHer = $('inputHer');
   const inputMe  = $('inputMe');
   const inputMsg = $('inputMsg');
+  function fillEditForm() {
+    inputHer.value = state.her || '';
+    inputMe.value  = state.me  || '';
+    inputMsg.value = state.msg || '';
+    $('editStreak').value     = state.streak || 0;
+    $('editTodayReps').value  = state.today.reps || 0;
+    $('editTodaySec').value   = state.today.sec  || 0;
+    $('editTotalReps').value  = state.total.reps || 0;
+    $('editTotalSec').value   = state.total.sec  || 0;
+  }
 
   $('saveBtn').addEventListener('click', () => {
     const her = (inputHer.value || '').trim().slice(0, 14);
     const me  = (inputMe.value  || '').trim().slice(0, 14);
     const msg = (inputMsg.value || '').trim().slice(0, 80);
     if (!her) { showToast('彼女の名前を入れてね💦'); inputHer.focus(); return; }
-    state.her = her;
-    state.me  = me;
-    state.msg = msg;
-    if (!state.coupleId) state.coupleId = newCoupleId();
+    state.her = her; state.me = me; state.msg = msg;
     saveState();
     applyNames();
-    modal.classList.remove('show');
-    showSpeech(`${her}、よろしくね♡`, 2000);
     cloudSave();
+    showToast('保存したよ♡');
   });
 
-  $('setupBtn').addEventListener('click', () => {
-    inputHer.value = state.her;
-    inputMe.value  = state.me;
-    inputMsg.value = state.msg;
-    modal.classList.add('show');
-    setTimeout(() => inputHer.focus(), 100);
+  $('saveTotalsBtn').addEventListener('click', () => {
+    const num = (id) => Math.max(0, parseInt($(id).value, 10) || 0);
+    state.streak     = num('editStreak');
+    state.today.reps = num('editTodayReps');
+    state.today.sec  = num('editTodaySec');
+    state.total.reps = num('editTotalReps');
+    state.total.sec  = num('editTotalSec');
+    state.today.date = todayStr();
+    saveState();
+    refreshStats();
+    cloudSave();
+    showToast('合計を更新したよ📊');
   });
 
-  // ===== dashboard / view mode (page-internal toggle) =====
+  // ===== tabs =====
   let dashUnsub = null;
-  function showDashboard() {
-    document.body.classList.add('view-mode');
-    if (!dashUnsub) {
-      dashUnsub = onSnapshot(doc(db, 'couples', COUPLE_ID), (snap) => {
-        if (!snap.exists()) {
-          $('dashStatus').textContent = 'まだ記録がないよ〜';
-          return;
-        }
-        renderDashboard(snap.data());
-      }, (err) => {
-        console.warn(err);
-        $('dashStatus').textContent = '読み込めなかった💦 (' + err.code + ')';
-      });
-    }
+  function ensureDashSub() {
+    if (dashUnsub) return;
+    dashUnsub = onSnapshot(doc(db, 'couples', COUPLE_ID), (snap) => {
+      if (!snap.exists()) {
+        $('dashStatus').textContent = 'まだ記録がないよ〜';
+        return;
+      }
+      renderDashboard(snap.data());
+    }, (err) => {
+      console.warn(err);
+      $('dashStatus').textContent = '読み込めなかった💦 (' + err.code + ')';
+    });
   }
-  function hideDashboard() {
-    document.body.classList.remove('view-mode');
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-content').forEach(c => {
+      c.hidden = c.id !== 'tab' + name[0].toUpperCase() + name.slice(1);
+    });
+    if (name === 'stats') ensureDashSub();
+    if (name === 'edit')  fillEditForm();
   }
-  $('dashBtn').addEventListener('click', showDashboard);
-  $('dashBackBtn').addEventListener('click', hideDashboard);
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => switchTab(b.dataset.tab));
+  });
 
   function formatRel(ms) {
     const diff = Date.now() - ms;
@@ -984,9 +1135,42 @@
     const dt = new Date(y, m-1, d);
     return `${m}月${d}日 (${WEEK[dt.getDay()]})`;
   }
+  function renderChart(byDay) {
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ymd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const e = byDay[ymd] || {};
+      const reps = (e.squat || 0) + (e.pushup || 0) + (e.burpee || 0);
+      const secs = e.plank || 0;
+      days.push({ ymd, reps, secs, label: (d.getMonth()+1) + '/' + d.getDate(), dow: d.getDay() });
+    }
+    const max = Math.max(1, ...days.map(d => d.reps), ...days.map(d => d.secs));
+    const W = 320, H = 160, padTop = 14, padBottom = 26, padX = 6;
+    const barW = (W - padX*2) / days.length - 2;
+    const innerH = H - padTop - padBottom;
+    const bars = days.map((d, i) => {
+      const x = padX + i * ((W - padX*2) / days.length) + 1;
+      const repsH = (d.reps / max) * innerH;
+      const secsH = (d.secs / max) * innerH;
+      const baseY = H - padBottom;
+      const isToday = i === days.length - 1;
+      return `
+        <g>
+          ${d.reps ? `<rect x="${x}" y="${baseY - repsH}" width="${barW/2 - 0.5}" height="${repsH}" fill="#d2691e" rx="2"/>` : ''}
+          ${d.secs ? `<rect x="${x + barW/2 + 0.5}" y="${baseY - secsH}" width="${barW/2 - 0.5}" height="${secsH}" fill="#5cb6e8" rx="2"/>` : ''}
+          <text x="${x + barW/2}" y="${H - 12}" font-size="9" text-anchor="middle" fill="${isToday ? '#d2691e' : '#888'}" font-weight="${isToday ? 'bold' : 'normal'}">${d.label}</text>
+        </g>`;
+    }).join('');
+    $('chart').innerHTML = `<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <line x1="${padX}" y1="${H - padBottom}" x2="${W - padX}" y2="${H - padBottom}" stroke="#cfe3f5" stroke-width="1"/>
+      ${bars}
+    </svg>`;
+  }
+
   function renderDashboard(d) {
     const her = d.her || 'きみ';
-    document.title = her + 'のがんばり 💕';
     $('dashName').textContent = her + 'のがんばり';
     $('dashStreak').textContent = d.streak || 0;
     $('dashTodayReps').textContent = (d.today && d.today.reps) || 0;
@@ -995,6 +1179,9 @@
     $('dashTotalSec').textContent  = (d.total && d.total.sec)  || 0;
     $('dashUpdate').textContent = d.updatedAt ? ('最終更新: ' + formatRel(d.updatedAt)) : '—';
     $('dashStatus').textContent = '';
+
+    // グラフ
+    renderChart(d.byDay || {});
 
     // 日付ごとの集計
     const byDay = d.byDay || {};
@@ -1029,7 +1216,7 @@
   refreshStats();
   cloudLoad(); // 共通URL: 起動時に必ずクラウドから最新を読む
   setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
-  if (isViewMode) showDashboard(); // ?view=me ブックマーク用に残す
+  if (isViewMode) switchTab('stats'); // ?view=me ブックマーク用
 </script>
 </body>
 </html>
