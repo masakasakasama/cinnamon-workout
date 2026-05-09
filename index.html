@@ -779,8 +779,12 @@
     <div>🔄 最終受信: <span id="diagLast">-</span></div>
     <div>📝 最終書込: <span id="diagWrite">-</span></div>
     <div id="diagError" style="color:#c8364b; margin-top:4px; word-break:break-word;"></div>
-    <button id="diagForceSync" style="margin-top:8px; background:#5cb6e8; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔄 手動同期</button>
-    <button id="diagReconnect" style="margin-top:8px; margin-left:6px; background:#ffb988; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔌 再接続</button>
+    <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+      <button id="diagForceSync" style="background:#5cb6e8; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔄 手動同期</button>
+      <button id="diagReconnect" style="background:#ffb988; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔌 再接続</button>
+      <button id="diagFlush" style="background:#a8d4a8; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">📤 キュー送信</button>
+    </div>
+    <a href="https://console.firebase.google.com/project/cinnamon-workout/firestore" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; font-size:11px; color:#5cb6e8; text-decoration:underline;">🔧 Firebaseコンソールで Firestore を確認</a>
   </div>
 
 <script type="module">
@@ -1501,6 +1505,15 @@
       showError('同期失敗: ' + (e.code || e.message));
       $('diagError').textContent = '手動同期失敗: ' + (e.code || e.message);
     }
+  });
+  // 手動 flush ボタン
+  $('diagFlush').addEventListener('click', async () => {
+    const n = state.pendingSessions?.length || 0;
+    if (n === 0) { showToast('送信待ちなし'); return; }
+    await flushPendingSessions();
+    const remaining = state.pendingSessions?.length || 0;
+    if (remaining === 0) showToast(`${n}件 送信完了✓`);
+    else showToast(`${n - remaining}件送信、${remaining}件残`);
   });
   // 再接続ボタン (Firestore SDK のネットワークを切り直す)
   $('diagReconnect').addEventListener('click', async () => {
