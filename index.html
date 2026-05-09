@@ -784,6 +784,7 @@
       <button id="diagReconnect" style="background:#ffb988; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🔌 再接続</button>
       <button id="diagFlush" style="background:#a8d4a8; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">📤 キュー送信</button>
       <button id="diagTest" style="background:#d2691e; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🧪 接続テスト</button>
+      <button id="diagDeep" style="background:#8b4513; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; font-family:inherit;">🩺 詳細診断</button>
     </div>
     <a href="https://console.firebase.google.com/project/cinnamon-workout/firestore" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; font-size:11px; color:#5cb6e8; text-decoration:underline;">🔧 Firebaseコンソールで Firestore を確認</a>
   </div>
@@ -1523,6 +1524,25 @@
     } catch (e) {
       $('diagError').innerHTML = '🧪テスト失敗: ' + (e.code || e.message);
       showError('テスト失敗: ' + (e.code || e.message));
+    }
+  });
+  // SDKを通さずに REST API を直接叩いて切り分け
+  $('diagDeep').addEventListener('click', async () => {
+    $('diagError').innerHTML = '🩺 REST API テスト中…';
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/couples/${COUPLE_ID}?key=${firebaseConfig.apiKey}`;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      const text = await r.text();
+      let summary = `HTTP ${r.status}`;
+      if (r.status === 200) summary += ' ✅ ドキュメント存在 (REST 経路OK)';
+      else if (r.status === 404) summary += ' (ドキュメント未作成 or DB未作成)';
+      else if (r.status === 403) summary += ' ⚠️ APIキー制限 or 権限拒否';
+      $('diagError').innerHTML = summary + '<br><pre style="font-size:9px;text-align:left;white-space:pre-wrap;word-break:break-all;background:#fff;padding:6px;border-radius:6px;margin-top:4px;">' + text.slice(0, 600).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;') + '</pre>';
+    } catch (e) {
+      $('diagError').innerHTML = '🩺 REST完全失敗: ' + e.message + '<br>👉 ネットワーク自体がfirestore.googleapis.comに到達してない';
     }
   });
   // 手動 flush ボタン
