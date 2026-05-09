@@ -741,14 +741,6 @@
         <input id="editStreak" type="number" min="0" inputmode="numeric">
       </div>
       <div class="edit-row">
-        <label>今日の回数</label>
-        <input id="editTodayReps" type="number" min="0" inputmode="numeric">
-      </div>
-      <div class="edit-row">
-        <label>今日の秒数</label>
-        <input id="editTodaySec" type="number" min="0" inputmode="numeric">
-      </div>
-      <div class="edit-row">
         <label>これまでの回数</label>
         <input id="editTotalReps" type="number" min="0" inputmode="numeric">
       </div>
@@ -769,7 +761,7 @@
   </nav>
 
   <div class="toast" id="toast"></div>
-  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v6 — リアルタイム同期</div>
+  <div style="margin-top:14px; font-size:11px; opacity:0.45; letter-spacing:0.5px;">v7 — 今日の値をbyDayから算出</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -865,10 +857,19 @@
 
   function refreshStats() {
     $('streak').textContent = state.streak;
-    $('todayReps').textContent = state.today.reps;
-    $('todaySec').textContent = state.today.sec;
+    const td = todayFromByDay(state.byDay);
+    $('todayReps').textContent = td.reps;
+    $('todaySec').textContent = td.sec;
     $('totalReps').textContent = state.total.reps;
     $('totalSec').textContent = state.total.sec;
+  }
+  function todayFromByDay(byDay) {
+    const t = todayStr();
+    const e = (byDay && byDay[t]) || {};
+    return {
+      reps: (e.squat||0) + (e.pushup||0) + (e.situp||0) + (e.burpee||0),
+      sec: e.plank || 0
+    };
   }
 
   // ===== Firestore I/O =====
@@ -1216,8 +1217,6 @@
   // ===== edit forms =====
   function fillEditForm() {
     $('editStreak').value     = state.streak || 0;
-    $('editTodayReps').value  = state.today.reps || 0;
-    $('editTodaySec').value   = state.today.sec  || 0;
     $('editTotalReps').value  = state.total.reps || 0;
     $('editTotalSec').value   = state.total.sec  || 0;
   }
@@ -1225,18 +1224,13 @@
   $('saveTotalsBtn').addEventListener('click', () => {
     const num = (id) => Math.max(0, parseInt($(id).value, 10) || 0);
     state.streak     = num('editStreak');
-    state.today.reps = num('editTodayReps');
-    state.today.sec  = num('editTodaySec');
     state.total.reps = num('editTotalReps');
     state.total.sec  = num('editTotalSec');
-    state.today.date = todayStr();
     saveState();
     refreshStats();
     cloudSavePartial({
       streak: state.streak,
-      today:  state.today,
-      total:  state.total,
-      lastDate: state.today.date
+      total:  state.total
     });
     showToast('合計を更新したよ📊');
   });
@@ -1310,8 +1304,9 @@
     const her = d.her || 'レベッカ';
     $('dashName').textContent = her + 'のがんばり';
     $('dashStreak').textContent = d.streak || 0;
-    $('dashTodayReps').textContent = (d.today && d.today.reps) || 0;
-    $('dashTodaySec').textContent  = (d.today && d.today.sec)  || 0;
+    const td = todayFromByDay(d.byDay);
+    $('dashTodayReps').textContent = td.reps;
+    $('dashTodaySec').textContent  = td.sec;
     $('dashTotalReps').textContent = (d.total && d.total.reps) || 0;
     $('dashTotalSec').textContent  = (d.total && d.total.sec)  || 0;
     $('dashUpdate').textContent = d.updatedAt ? ('最終更新: ' + formatRel(d.updatedAt)) : '—';
