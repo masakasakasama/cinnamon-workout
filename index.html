@@ -892,10 +892,13 @@
   function startCloudSync() {
     if (!state.coupleId) return;
     onSnapshot(doc(db, 'couples', state.coupleId), (snap) => {
-      if (!snap.exists()) return;
-      applyCloudData(snap.data());
+      // ドキュメント未作成でも空データで描画してUIをロック解除
+      applyCloudData(snap.exists() ? snap.data() : {});
     }, (err) => {
       console.warn('snapshot error', err);
+      // 読込みエラー時もUIロック解除
+      $('dashStatus').textContent = '同期エラー';
+      $('dashRecent').innerHTML = '<div class="day-empty">読み込めなかった</div>';
       showError('同期エラー: ' + (err.code || err.message));
     });
   }
@@ -1312,7 +1315,8 @@
     $('dashTotalReps').textContent = (d.total && d.total.reps) || 0;
     $('dashTotalSec').textContent  = (d.total && d.total.sec)  || 0;
     $('dashUpdate').textContent = d.updatedAt ? ('最終更新: ' + formatRel(d.updatedAt)) : '—';
-    $('dashStatus').textContent = '';
+    const hasAny = (d.byDay && Object.keys(d.byDay).length) || (d.total && (d.total.reps || d.total.sec));
+    $('dashStatus').textContent = hasAny ? '' : 'まだ記録がないよ〜';
 
     // グラフ
     renderChart(d.byDay || {});
