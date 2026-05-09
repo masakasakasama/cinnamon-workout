@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v16">
+<html lang="ja" data-app-version="v17">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -527,8 +527,94 @@
     color: #4a7ba8;
     white-space: nowrap;
   }
-  .day-item b { color: #d2691e; margin-left: 2px; font-size: 13px; }
+  .day-item b { color: #ff7eb9; margin-left: 2px; font-size: 13px; }
+  .day-item .kcal { font-size: 11px; color: #ff9b6b; margin-left: 4px; }
   .day-empty { text-align: center; opacity: 0.6; font-style: italic; padding: 16px 0; }
+  .day-edit-btn {
+    background: rgba(255, 200, 220, 0.4);
+    border: none;
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    cursor: pointer;
+    margin-left: 6px;
+    font-size: 13px;
+    padding: 0;
+  }
+  .day-edit-btn:active { background: #ff9bb3; }
+  .add-day-btn {
+    background: linear-gradient(180deg, #ff9bb3, #ff7eb9);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    margin-left: auto;
+    box-shadow: 0 2px 6px rgba(255, 126, 185, 0.35);
+  }
+  .add-day-btn:active { transform: translateY(1px); }
+  .day-edit-form {
+    background: linear-gradient(180deg, #fff8fc 0%, #fff 100%);
+    border: 2px dashed #ff9bb3;
+    border-radius: 14px;
+    padding: 12px 10px;
+    margin-bottom: 10px;
+  }
+  .day-edit-head { margin-bottom: 8px; text-align: center; }
+  .day-edit-head input {
+    padding: 7px 12px;
+    border: 2px solid #ffd6e7;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    color: #5a3a1f;
+  }
+  .day-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .day-edit-label { width: 70px; flex-shrink: 0; font-weight: bold; color: #b8682f; }
+  .day-edit-row input[type="number"] {
+    width: 50px;
+    padding: 5px 6px;
+    border: 1.5px solid #ffd6c2;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    text-align: center;
+  }
+  .day-edit-out {
+    margin-left: auto;
+    font-size: 11px;
+    color: #ff7eb9;
+    font-weight: bold;
+  }
+  .day-edit-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .day-edit-cancel {
+    background: #fff;
+    border: 2px solid #ffd6c2;
+    color: #b8682f;
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .chart-card h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
   .dash-update { font-size: 11px; opacity: 0.55; text-align: right; margin: 4px 4px 12px; }
   .dash-status { font-size: 12px; opacity: 0.7; text-align: center; margin: 6px 0; }
 
@@ -781,7 +867,7 @@
     </div>
 
     <div class="chart-card">
-      <h3>📅 日ごとの記録</h3>
+      <h3>📅 日ごとの記録 <button id="addDayBtn" class="add-day-btn">➕ 追加</button></h3>
       <div class="dash-daily" id="dashRecent"><div class="day-empty">読み込み中…</div></div>
     </div>
     <div class="dash-update" id="dashUpdate">—</div>
@@ -1072,6 +1158,8 @@
     state.byDay = state.byDay || {};
     state.byDay[t] = state.byDay[t] || {};
     state.byDay[t][sess.type] = (state.byDay[t][sess.type] || 0) + sess.target;
+    state.byDay[t][sess.type+'_sets'] = (state.byDay[t][sess.type+'_sets'] || 0) + 1;
+    state.byDay[t][sess.type+'_reps'] = sess.target;
     state.byDay[t]._sessions = (state.byDay[t]._sessions || 0) + 1;
     state.recent = [...(state.recent || []), sess].slice(-50);
 
@@ -1100,6 +1188,8 @@
         const updates = {
           byDay: { [t]: {
             [sess.type]: increment(sess.target),
+            [sess.type + '_sets']: increment(1),
+            [sess.type + '_reps']: sess.target,
             _sessions: increment(1)
           }},
           lastDate: t,
@@ -1450,6 +1540,16 @@
   const EX_LABEL = { squat: 'スクワット', pushup: '腕立て', situp: '腹筋', plank: 'プランク', burpee: 'バーピー' };
   const EX_ICON  = { squat: '🦵', pushup: '💪', situp: '🤰', plank: '🧘', burpee: '🤸' };
   const EX_UNIT  = { squat: '回', pushup: '回', situp: '回', plank: '秒', burpee: '回' };
+  const EX_ORDER = ['squat', 'pushup', 'situp', 'burpee', 'plank'];
+  // 推定消費カロリー (kcal per rep/sec, 体重50kg目安)
+  const CAL_PER = { squat: 0.32, pushup: 0.36, situp: 0.27, burpee: 1.43, plank: 0.05 };
+  function calForType(type, value) {
+    return Math.round((CAL_PER[type] || 0) * value * 10) / 10;
+  }
+  function calTotalForDay(e) {
+    if (!e) return 0;
+    return EX_ORDER.reduce((sum, k) => sum + calForType(k, e[k] || 0), 0);
+  }
   const WEEK = ['日','月','火','水','木','金','土'];
   function formatDay(ymd) {
     const [y, m, d] = ymd.split('-').map(Number);
@@ -1510,28 +1610,143 @@
     const byDay = d.byDay || {};
     const days = Object.keys(byDay).sort().reverse();
     const dailyHtml = days.length
-      ? days.map(day => {
-          const e = byDay[day] || {};
-          const sessionN = e._sessions || 0;
-          const items = Object.keys(e)
-            .filter(k => k !== '_sessions')
-            .map(k => {
-              const ic = EX_ICON[k] || '✨';
-              const lb = EX_LABEL[k] || k;
-              const un = EX_UNIT[k] || '';
-              return `<span class="day-item">${ic} ${escapeHtml(lb)} <b>${e[k]}${un}</b></span>`;
-            }).join('');
-          return `
-            <div class="day-row">
-              <div class="day-head">
-                <span class="day-date">${formatDay(day)}</span>
-                ${sessionN ? `<span class="day-meta">${sessionN}セット</span>` : ''}
-              </div>
-              <div class="day-items">${items}</div>
-            </div>`;
-        }).join('')
+      ? days.map(day => renderDayCard(day, byDay[day])).join('')
       : '<div class="day-empty">まだ何もしてないよ〜</div>';
     $('dashRecent').innerHTML = dailyHtml;
+    attachDayEditButtons();
+    attachAddDayBtn();
+  }
+  function renderDayCard(day, e) {
+    e = e || {};
+    const sessionN = e._sessions || 0;
+    const items = EX_ORDER
+      .filter(k => (e[k] || 0) > 0)
+      .map(k => {
+        const cal = calForType(k, e[k]);
+        const sets = e[k+'_sets'];
+        const setsLabel = sets > 0 ? ` ${sets}セット` : '';
+        return `<span class="day-item">${EX_ICON[k]} ${EX_LABEL[k]} <b>${e[k]}${EX_UNIT[k]}</b>${setsLabel} <span class="kcal">${cal}kcal</span></span>`;
+      }).join('');
+    const totalCal = calTotalForDay(e);
+    return `
+      <div class="day-row" data-day="${day}">
+        <div class="day-head">
+          <span class="day-date">${formatDay(day)}</span>
+          <span class="day-meta">${sessionN ? sessionN + 'セット ・ ' : ''}${totalCal.toFixed(1)} kcal</span>
+          <button class="day-edit-btn" data-day="${day}" aria-label="編集">✏️</button>
+        </div>
+        <div class="day-items">${items || '<span style="opacity:0.5; font-size:12px;">記録なし</span>'}</div>
+      </div>`;
+  }
+  function attachDayEditButtons() {
+    document.querySelectorAll('.day-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const day = btn.dataset.day;
+        openDayEdit(day);
+      });
+    });
+  }
+
+  function openDayEdit(day) {
+    const e = (state.byDay && state.byDay[day]) || {};
+    const rows = EX_ORDER.map(t => {
+      const total = e[t] || 0;
+      const sets = e[t+'_sets'] || (total ? 1 : 0);
+      const reps = e[t+'_reps'] || (total && sets ? Math.round(total/sets) : 0);
+      return `
+        <div class="day-edit-row">
+          <span class="day-edit-label">${EX_ICON[t]} ${EX_LABEL[t]}</span>
+          <input type="number" class="day-edit-sets" data-type="${t}" min="0" inputmode="numeric" value="${sets}" placeholder="セ">
+          <span style="opacity:0.5;">×</span>
+          <input type="number" class="day-edit-reps" data-type="${t}" min="0" inputmode="numeric" value="${reps}" placeholder="${EX_UNIT[t]}">
+          <span style="font-size:11px; opacity:0.6;">${EX_UNIT[t]}</span>
+          <span class="day-edit-out" data-type="${t}">= 0${EX_UNIT[t]}</span>
+        </div>`;
+    }).join('');
+    const html = `
+      <div class="day-edit-form">
+        <div class="day-edit-head">
+          <input type="date" id="dayEditDate" value="${day}">
+        </div>
+        ${rows}
+        <div class="day-edit-actions">
+          <button class="save-btn-wide" id="dayEditSave">保存</button>
+          <button class="day-edit-cancel" id="dayEditCancel">キャンセル</button>
+        </div>
+      </div>`;
+    // 編集フォームを既存の day-row の代わりに表示
+    const row = document.querySelector(`.day-row[data-day="${day}"]`);
+    if (row) {
+      row.outerHTML = html;
+    } else {
+      // 新規追加: dashRecent の先頭に挿入
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      $('dashRecent').prepend(wrap.firstElementChild);
+    }
+    // ライブ更新（合計表示）
+    document.querySelectorAll('.day-edit-form input[type="number"]').forEach(inp => {
+      inp.addEventListener('input', updateDayEditOut);
+    });
+    updateDayEditOut();
+    $('dayEditSave').addEventListener('click', saveDayEdit);
+    $('dayEditCancel').addEventListener('click', () => fallbackSync());
+  }
+  function updateDayEditOut() {
+    EX_ORDER.forEach(t => {
+      const sEl = document.querySelector(`.day-edit-sets[data-type="${t}"]`);
+      const rEl = document.querySelector(`.day-edit-reps[data-type="${t}"]`);
+      const out = document.querySelector(`.day-edit-out[data-type="${t}"]`);
+      if (!sEl || !rEl || !out) return;
+      const total = (parseInt(sEl.value, 10) || 0) * (parseInt(rEl.value, 10) || 0);
+      out.textContent = '= ' + total + EX_UNIT[t] + ' (' + calForType(t, total) + 'kcal)';
+    });
+  }
+  function saveDayEdit() {
+    const date = $('dayEditDate').value;
+    if (!date) { showToast('日付を選んでね'); return; }
+    state.byDay = state.byDay || {};
+    const old = state.byDay[date] || {};
+    state.byDay[date] = state.byDay[date] || {};
+    let totalSets = 0;
+    let deltaReps = 0, deltaSec = 0;
+    EX_ORDER.forEach(t => {
+      const sEl = document.querySelector(`.day-edit-sets[data-type="${t}"]`);
+      const rEl = document.querySelector(`.day-edit-reps[data-type="${t}"]`);
+      const sets = parseInt(sEl.value, 10) || 0;
+      const reps = parseInt(rEl.value, 10) || 0;
+      const newTotal = sets * reps;
+      const oldTotal = old[t] || 0;
+      const delta = newTotal - oldTotal;
+      if (t === 'plank') deltaSec += delta;
+      else deltaReps += delta;
+      state.byDay[date][t] = newTotal;
+      state.byDay[date][t+'_sets'] = sets;
+      state.byDay[date][t+'_reps'] = reps;
+      totalSets += sets;
+    });
+    state.byDay[date]._sessions = totalSets;
+    state.total.reps = Math.max(0, state.total.reps + deltaReps);
+    state.total.sec  = Math.max(0, state.total.sec  + deltaSec);
+    saveState();
+    refreshStats();
+    cloudSavePartial({
+      byDay: state.byDay,
+      total: state.total
+    });
+    showToast('保存したよ📅');
+    fallbackSync();
+  }
+  // 「➕ 過去の記録を追加」ボタン
+  function attachAddDayBtn() {
+    const btn = $('addDayBtn');
+    if (!btn) return;
+    btn.onclick = () => {
+      const today = todayStr();
+      // すでに今日の編集が開いてるかチェック
+      if (document.querySelector('.day-edit-form')) return;
+      openDayEdit(today);
+    };
   }
 
   // ===== auto-update check =====
