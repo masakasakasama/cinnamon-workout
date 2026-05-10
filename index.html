@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v33">
+<html lang="ja" data-app-version="v34">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2270,21 +2270,23 @@
         const setMap = e[k+'_setMap'];
         const u = EX_UNIT[k];
         let body;
-        // setMap があれば回数別に分解した形式で表示
-        const breakdown = formatSetMap(setMap, u);
-        if (breakdown) {
-          // 複数の異なる回数があるか
-          const isMixed = breakdown.includes(' + ');
-          body = isMixed
-            ? `<b>${breakdown}</b> <span style="opacity:0.7;">= ${total}${u}</span>`
-            : `<b>${breakdown}</b>`;
-        } else if (sets > 0 && reps > 0 && sets * reps === total) {
-          // 旧データ互換: setMap が無くても sets×reps で表示できる場合
-          body = sets === 1 ? `<b>1セット × ${reps}${u}</b>` : `<b>${sets}セット × ${reps}${u}</b> <span style="opacity:0.7;">= ${total}${u}</span>`;
-        } else if (sets > 0) {
-          body = `<b>${total}${u}</b> <span style="opacity:0.7;">${sets}セット</span>`;
+        if (k === 'love') {
+          // ハートはセット概念なし、回数のみ表示
+          body = `<b>${total}${u}</b>` + ' ' + '💗'.repeat(Math.min(total, 5));
         } else {
-          body = `<b>${total}${u}</b>`;
+          const breakdown = formatSetMap(setMap, u);
+          if (breakdown) {
+            const isMixed = breakdown.includes(' + ');
+            body = isMixed
+              ? `<b>${breakdown}</b> <span style="opacity:0.7;">= ${total}${u}</span>`
+              : `<b>${breakdown}</b>`;
+          } else if (sets > 0 && reps > 0 && sets * reps === total) {
+            body = sets === 1 ? `<b>1セット × ${reps}${u}</b>` : `<b>${sets}セット × ${reps}${u}</b> <span style="opacity:0.7;">= ${total}${u}</span>`;
+          } else if (sets > 0) {
+            body = `<b>${total}${u}</b> <span style="opacity:0.7;">${sets}セット</span>`;
+          } else {
+            body = `<b>${total}${u}</b>`;
+          }
         }
         return `<span class="day-item">${EX_ICON[k]} ${EX_LABEL[k]} ${body} <span class="kcal">${cal}kcal</span></span>`;
       }).join('');
@@ -2311,6 +2313,18 @@
     const e = (state.byDay && state.byDay[day]) || {};
     const rows = EX_ORDER.map(t => {
       const total = e[t] || 0;
+      if (t === 'love') {
+        // ハートはセット無し、回数のみ
+        return `
+          <div class="day-edit-row">
+            <span class="day-edit-label">${EX_ICON[t]} ${EX_LABEL[t]}</span>
+            <span class="day-edit-cell">
+              <input type="number" class="day-edit-reps" data-type="${t}" min="0" inputmode="numeric" value="${total}">
+              <span class="cell-tag">${EX_UNIT[t]}</span>
+            </span>
+            <span class="day-edit-out" data-type="${t}">${total}${EX_UNIT[t]}</span>
+          </div>`;
+      }
       const sets = e[t+'_sets'] || (total ? 1 : 0);
       const reps = e[t+'_reps'] || (total && sets ? Math.round(total/sets) : 0);
       return `
@@ -2359,12 +2373,18 @@
   }
   function updateDayEditOut() {
     EX_ORDER.forEach(t => {
-      const sEl = document.querySelector(`.day-edit-sets[data-type="${t}"]`);
       const rEl = document.querySelector(`.day-edit-reps[data-type="${t}"]`);
       const out = document.querySelector(`.day-edit-out[data-type="${t}"]`);
-      if (!sEl || !rEl || !out) return;
-      const total = (parseInt(sEl.value, 10) || 0) * (parseInt(rEl.value, 10) || 0);
-      out.textContent = '= ' + total + EX_UNIT[t] + ' (' + calForType(t, total) + 'kcal)';
+      if (!rEl || !out) return;
+      let total;
+      if (t === 'love') {
+        total = parseInt(rEl.value, 10) || 0;
+      } else {
+        const sEl = document.querySelector(`.day-edit-sets[data-type="${t}"]`);
+        if (!sEl) return;
+        total = (parseInt(sEl.value, 10) || 0) * (parseInt(rEl.value, 10) || 0);
+      }
+      out.textContent = (t === 'love' ? '' : '= ') + total + EX_UNIT[t] + ' (' + calForType(t, total) + 'kcal)';
     });
   }
   async function saveDayEdit() {
@@ -2377,11 +2397,21 @@
     let totalSets = 0;
     let deltaReps = 0, deltaSec = 0;
     EX_ORDER.forEach(t => {
-      const sEl = document.querySelector(`.day-edit-sets[data-type="${t}"]`);
       const rEl = document.querySelector(`.day-edit-reps[data-type="${t}"]`);
-      const sets = parseInt(sEl.value, 10) || 0;
-      const reps = parseInt(rEl.value, 10) || 0;
-      const newTotal = sets * reps;
+      if (!rEl) return;
+      let sets, reps, newTotal;
+      if (t === 'love') {
+        // ハートは回数のみ。便宜的に sets=1 で保存
+        const v = parseInt(rEl.value, 10) || 0;
+        sets = v > 0 ? 1 : 0;
+        reps = v;
+        newTotal = v;
+      } else {
+        const sEl = document.querySelector(`.day-edit-sets[data-type="${t}"]`);
+        sets = parseInt(sEl.value, 10) || 0;
+        reps = parseInt(rEl.value, 10) || 0;
+        newTotal = sets * reps;
+      }
       const oldTotal = old[t] || 0;
       const delta = newTotal - oldTotal;
       if (t === 'plank') deltaSec += delta;
@@ -2389,7 +2419,6 @@
       newDay[t] = newTotal;
       newDay[t+'_sets'] = sets;
       newDay[t+'_reps'] = reps;
-      // setMap 完全置換: 同じ回数 × N セット
       newDay[t+'_setMap'] = sets > 0 && reps > 0 ? { [String(reps)]: sets } : {};
       totalSets += sets;
     });
