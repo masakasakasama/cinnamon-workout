@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v32">
+<html lang="ja" data-app-version="v33">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2137,7 +2137,7 @@
   const EX_UNIT  = { squat: '回', situp: '回', plank: '秒', burpee: '回', aerobic: '分', love: '回' };
   const EX_ORDER = ['squat', 'situp', 'burpee', 'plank', 'aerobic', 'love'];
   // 推定消費カロリー (kcal per 単位, 体重50kg目安)
-  const CAL_PER = { squat: 0.32, situp: 0.27, burpee: 1.43, plank: 0.05, aerobic: 6, love: 2 };
+  const CAL_PER = { squat: 0.32, situp: 0.27, burpee: 1.43, plank: 0.05, aerobic: 6, love: 70 };
   function calForType(type, value) {
     return Math.round((CAL_PER[type] || 0) * value * 10) / 10;
   }
