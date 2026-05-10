@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v34">
+<html lang="ja" data-app-version="v35">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -602,11 +602,13 @@
   .day-item {
     background: #f0f7ff;
     border: 1px solid #cfe3f5;
-    border-radius: 999px;
-    padding: 3px 9px;
+    border-radius: 14px;
+    padding: 4px 10px;
     font-size: 12px;
     color: #4a7ba8;
-    white-space: nowrap;
+    max-width: 100%;
+    word-break: break-word;
+    line-height: 1.5;
   }
   .day-item b { color: #ff7eb9; margin-left: 2px; font-size: 13px; }
   .day-item .kcal { font-size: 11px; color: #ff9b6b; margin-left: 4px; }
@@ -2152,8 +2154,9 @@
       .map(([k, c]) => [parseInt(k, 10), c])
       .sort((a, b) => b[0] - a[0]); // 大きい回数から
     if (!entries.length) return null;
+    // 1セットの時は「セット ×」を省略してコンパクトに: "20回 + 10回 + 5回"
     return entries.map(([reps, count]) => {
-      return count > 1 ? `${count}セット × ${reps}${unit}` : `1セット × ${reps}${unit}`;
+      return count > 1 ? `${count}×${reps}${unit}` : `${reps}${unit}`;
     }).join(' + ');
   }
   const WEEK = ['日','月','火','水','木','金','土'];
