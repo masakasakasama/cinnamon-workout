@@ -1,0 +1,38 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe6f0"/>
+      <stop offset="100%" stop-color="#ffc8da"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+
+  <!-- 飾り (お花) -->
+  <circle cx="80" cy="100" r="6" fill="#ff7eb9" opacity="0.5"/>
+  <circle cx="430" cy="120" r="5" fill="#ff7eb9" opacity="0.4"/>
+  <circle cx="100" cy="420" r="6" fill="#ff7eb9" opacity="0.4"/>
+  <circle cx="420" cy="400" r="6" fill="#ff7eb9" opacity="0.5"/>
+
+  <!-- Cinnamoroll風キャラ -->
+  <g transform="translate(256, 270)">
+    <!-- 左の長い垂れ耳 -->
+    <path d="M -90 -70 Q -180 -30 -180 70 Q -160 130 -110 110 Q -85 80 -80 -10 Z"
+          fill="#fff" stroke="#c9a06a" stroke-width="10" stroke-linejoin="round"/>
+    <!-- 右の長い垂れ耳 -->
+    <path d="M 90 -70 Q 180 -30 180 70 Q 160 130 110 110 Q 85 80 80 -10 Z"
+          fill="#fff" stroke="#c9a06a" stroke-width="10" stroke-linejoin="round"/>
+    <!-- 頭 -->
+    <ellipse cx="0" cy="0" rx="125" ry="120" fill="#fff" stroke="#c9a06a" stroke-width="10"/>
+    <!-- 青い目 -->
+    <ellipse cx="-42" cy="-15" rx="14" ry="22" fill="#5cb6e8"/>
+    <ellipse cx="42" cy="-15" rx="14" ry="22" fill="#5cb6e8"/>
+    <circle cx="-38" cy="-28" r="5" fill="#fff"/>
+    <circle cx="46" cy="-28" r="5" fill="#fff"/>
+    <!-- ω口 -->
+    <path d="M -22 28 Q -11 44 0 34 Q 11 44 22 28"
+          fill="none" stroke="#a6743a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- ピンクのほっぺ -->
+    <ellipse cx="-72" cy="22" rx="18" ry="11" fill="#ffb6c8" opacity="0.9"/>
+    <ellipse cx="72" cy="22" rx="18" ry="11" fill="#ffb6c8" opacity="0.9"/>
+  </g>
+</svg>
