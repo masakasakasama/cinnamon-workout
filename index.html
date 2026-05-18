@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-app-version="v36">
+<html lang="ja" data-app-version="v37">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -234,6 +234,18 @@
     padding: 0;
   }
   .char-switch:active { transform: scale(0.92); }
+
+  .char-acc {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 38px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 4;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.12);
+  }
 
   .speech {
     position: absolute;
@@ -927,6 +939,62 @@
   .coach-card.tip {
     background: linear-gradient(135deg, #f0f8ff 0%, #fff8fc 100%);
   }
+  /* ===== レベル / ごほうび ===== */
+  .level-card { background: linear-gradient(135deg, #fff3e0 0%, #ffe6f0 100%); border: 2px solid #ffcf8f; }
+  .level-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .level-badge {
+    background: linear-gradient(180deg, #ffd76b, #ffb84d);
+    color: #7a4a00; font-weight: 900; font-size: 15px;
+    padding: 3px 12px; border-radius: 999px;
+    box-shadow: 0 2px 5px rgba(255,170,60,.4);
+  }
+  .level-title { font-weight: bold; color: #b8682f; font-size: 14px; }
+  .level-bar {
+    height: 14px; background: #fff0e0; border-radius: 999px;
+    overflow: hidden; border: 1px solid #ffd6a8;
+  }
+  .level-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, #ffd76b, #ff9b6b);
+    transition: width .6s cubic-bezier(.6,.2,.4,1);
+  }
+  .level-sub { font-size: 11px; color: #b8682f; margin: 5px 0 12px; text-align: right; }
+  .level-eyebrow { font-size: 12px; font-weight: bold; color: #ff7eb9; margin-bottom: 8px; }
+  .level-eyebrow small { font-weight: normal; opacity: 0.6; }
+  .reward-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .reward-cell {
+    aspect-ratio: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #fff; border: 2px solid #ffe0ec; border-radius: 14px;
+    font-size: 24px; cursor: pointer; position: relative;
+    transition: transform .12s;
+  }
+  .reward-cell:active { transform: scale(.92); }
+  .reward-cell.locked { filter: grayscale(1); opacity: 0.35; cursor: not-allowed; }
+  .reward-cell.equipped { border-color: #ff7eb9; box-shadow: 0 0 0 3px rgba(255,126,185,.25); background: #fff0f6; }
+  .reward-cell .rname { font-size: 8px; color: #b8682f; margin-top: 2px; font-weight: bold; }
+  .reward-cell .lock-lv { position: absolute; bottom: 2px; right: 4px; font-size: 8px; color: #aaa; }
+  /* ===== ヒートマップ ===== */
+  .hm-wrap { overflow-x: auto; padding: 4px 0; }
+  .hm-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; }
+  .hm-cell { width: 13px; height: 13px; border-radius: 3px; background: #f0eef2; }
+  .hm-cell.l1 { background: #ffe0ec; }
+  .hm-cell.l2 { background: #ffb6cf; }
+  .hm-cell.l3 { background: #ff8ab0; }
+  .hm-cell.l4 { background: #ff5e8f; }
+  .hm-cell.today { box-shadow: 0 0 0 2px #ffb84d; }
+  .hm-legend { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #888; margin-top: 8px; justify-content: flex-end; }
+  .hm-legend .hm-cell { width: 11px; height: 11px; }
+  /* ===== 週報 ===== */
+  .weekly-card { background: linear-gradient(135deg, #eef7ff 0%, #fff5fb 100%); }
+  .wk-big { font-size: 28px; font-weight: 900; color: #ff7eb9; line-height: 1; }
+  .wk-big small { font-size: 13px; color: #888; font-weight: normal; }
+  .wk-delta { font-size: 13px; font-weight: bold; margin-left: 8px; }
+  .wk-delta.up { color: #2ea36b; }
+  .wk-delta.down { color: #d65a7a; }
+  .wk-row { display: flex; justify-content: space-between; font-size: 12px; color: #5a3a1f; padding: 5px 0; }
+  .wk-row + .wk-row { border-top: 1px dashed #d8e8f5; }
+  .wk-msg { font-size: 13px; color: #4a7ba8; margin-top: 10px; line-height: 1.6; background: rgba(255,255,255,.6); padding: 8px 12px; border-radius: 12px; }
   .coach-eyebrow {
     font-size: 12px;
     font-weight: bold;
@@ -1048,6 +1116,7 @@
   <div class="stage">
     <div class="speech" id="speech">いっしょにやろ〜！</div>
     <button id="charSwitch" class="char-switch" aria-label="キャラ切替">🍮</button>
+    <div class="char-acc" id="charAcc"></div>
     <div class="roll" id="roll" data-anim="idle">
       <div class="roll-anim">
         <svg id="charCinnamon" viewBox="0 0 100 100" aria-hidden="true">
@@ -1187,6 +1256,16 @@
     </div>
 
     <div class="chart-card">
+      <h3>📅 がんばりカレンダー <small>(濃いほどたくさん)</small></h3>
+      <div id="heatmap"></div>
+    </div>
+
+    <div class="chart-card weekly-card">
+      <h3>📈 今週のふりかえり</h3>
+      <div id="weeklyReport"></div>
+    </div>
+
+    <div class="chart-card">
       <h3>🍩 直近14日のバランス <small>(消費kcal比率)</small></h3>
       <div id="chart"></div>
     </div>
@@ -1202,6 +1281,17 @@
   <section class="tab-content" id="tabCoach" hidden>
     <h2 class="coach-title">💕 きょうのトレーナー</h2>
     <div class="coach-greet" id="coachGreet">…</div>
+
+    <div class="coach-card level-card">
+      <div class="level-head">
+        <span class="level-badge" id="lvBadge">Lv.1</span>
+        <span class="level-title" id="lvTitle">はじめのいっぽ</span>
+      </div>
+      <div class="level-bar"><div class="level-fill" id="lvFill" style="width:0%"></div></div>
+      <div class="level-sub" id="lvSub">あと —kcal で次のレベル</div>
+      <div class="level-eyebrow">🎁 ごほうび <small>(タップで装備 / もう一度で外す)</small></div>
+      <div class="reward-grid" id="rewardGrid"></div>
+    </div>
 
     <div class="coach-card hero" id="coachToday">
       <div class="coach-eyebrow">💡 きょうのおすすめ</div>
@@ -1314,10 +1404,11 @@
         targets: s.targets || { squat:10, situp:15, plank:30, burpee:10, aerobic:10, love:1 },
         soundOn: s.soundOn !== false,
         pendingSessions: s.pendingSessions || [],
-        character: s.character || 'cinnamon'
+        character: s.character || 'cinnamon',
+        accessory: s.accessory || ''
       };
     } catch {
-      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,situp:15,plank:30,burpee:10,aerobic:10,love:1}, soundOn:true, pendingSessions:[], character:'cinnamon' };
+      return { coupleId:'', her:'', me:'', msg:'', streak:0, lastDate:'', today:{date:'',reps:0,sec:0}, total:{reps:0,sec:0}, recent:[], byDay:{}, speed:'normal', targets:{squat:10,situp:15,plank:30,burpee:10,aerobic:10,love:1}, soundOn:true, pendingSessions:[], character:'cinnamon', accessory:'' };
     }
   }
   const state = loadState();
@@ -1397,11 +1488,12 @@
     if (d.byDay && typeof d.byDay === 'object') state.byDay = d.byDay;
     if (d.targets && typeof d.targets === 'object') state.targets = { ...state.targets, ...d.targets };
     if (d.character) { state.character = d.character; applyCharacter(); }
+    if (typeof d.accessory === 'string') { state.accessory = d.accessory; applyAccessory(); }
     if (state.today.date !== todayStr()) state.today = { date: todayStr(), reps: 0, sec: 0 };
     saveState();
-    refreshStats();
-    if (selected) refreshCountUI();
-    renderDashboard(d); // きろくタブも更新
+    try { refreshStats(); } catch (e) { console.warn('refreshStats', e); }
+    try { if (selected) refreshCountUI(); } catch (e) { console.warn('refreshCountUI', e); }
+    try { renderDashboard(d); } catch (e) { console.warn('renderDashboard', e); } // きろくタブ更新失敗でも同期は継続
     $('diagLast').textContent = new Date().toLocaleTimeString('ja-JP');
     $('diagError').textContent = '';
   }
@@ -1821,6 +1913,91 @@
   });
   applyCharacter();
 
+  // ===== レベル / ごほうび =====
+  // 累計消費kcalでレベルアップ。reward を持つレベルで装備品が解放される
+  const LEVELS = [
+    { lv: 1,  kcal: 0,    title: 'はじめのいっぽ' },
+    { lv: 2,  kcal: 150,  title: 'がんばりやさん',   reward: 'ribbon' },
+    { lv: 3,  kcal: 400,  title: 'こつこつマスター' },
+    { lv: 4,  kcal: 800,  title: 'ねこぜ卒業',       reward: 'hat' },
+    { lv: 5,  kcal: 1400, title: 'きんトレ妖精' },
+    { lv: 6,  kcal: 2200, title: 'むきむきの卵',     reward: 'glasses' },
+    { lv: 7,  kcal: 3200, title: 'すじにくの使い' },
+    { lv: 8,  kcal: 4500, title: 'ハートの戦士',     reward: 'crown' },
+    { lv: 9,  kcal: 6000, title: 'でんせつの…',      reward: 'wings' },
+    { lv: 10, kcal: 8000, title: 'きんトレの神',     reward: 'halo' }
+  ];
+  const REWARDS = {
+    ribbon:  { emoji: '🎀', name: 'リボン' },
+    hat:     { emoji: '🎩', name: 'ぼうし' },
+    glasses: { emoji: '👓', name: 'めがね' },
+    crown:   { emoji: '👑', name: 'かんむり' },
+    wings:   { emoji: '🦋', name: 'はね' },
+    halo:    { emoji: '😇', name: '天使の輪' }
+  };
+  function totalKcalAll() {
+    let sum = 0;
+    Object.values(state.byDay || {}).forEach(e => {
+      EX_ORDER.forEach(t => sum += calForType(t, e[t] || 0));
+    });
+    return sum;
+  }
+  function getLevelInfo() {
+    const total = totalKcalAll();
+    let cur = LEVELS[0], next = null;
+    for (let i = 0; i < LEVELS.length; i++) {
+      if (total >= LEVELS[i].kcal) cur = LEVELS[i];
+      else { next = LEVELS[i]; break; }
+    }
+    const progress = next ? Math.min(1, (total - cur.kcal) / (next.kcal - cur.kcal)) : 1;
+    const unlocked = LEVELS.filter(l => total >= l.kcal && l.reward).map(l => l.reward);
+    return { total, cur, next, progress, unlocked };
+  }
+  function applyAccessory() {
+    const el = $('charAcc');
+    if (!el) return;
+    const r = state.accessory && REWARDS[state.accessory];
+    el.textContent = r ? r.emoji : '';
+  }
+  function renderLevelCard() {
+    const info = getLevelInfo();
+    const bd = $('lvBadge'), tt = $('lvTitle'), fl = $('lvFill'), sb = $('lvSub'), rg = $('rewardGrid');
+    if (!bd) return;
+    bd.textContent = 'Lv.' + info.cur.lv;
+    tt.textContent = info.cur.title;
+    fl.style.width = Math.round(info.progress * 100) + '%';
+    if (info.next) {
+      const remain = Math.ceil(info.next.kcal - info.total);
+      sb.textContent = `あと ${remain}kcal で Lv.${info.next.lv}`;
+    } else {
+      sb.textContent = '🎉 最高レベル達成！';
+    }
+    rg.innerHTML = LEVELS.filter(l => l.reward).map(l => {
+      const r = REWARDS[l.reward];
+      const unlocked = info.unlocked.includes(l.reward);
+      const equipped = state.accessory === l.reward;
+      const cls = unlocked ? (equipped ? 'reward-cell equipped' : 'reward-cell') : 'reward-cell locked';
+      return `<div class="${cls}" data-reward="${l.reward}" ${unlocked ? '' : 'data-locked="1"'}>
+        <span>${r.emoji}</span>
+        <span class="rname">${unlocked ? r.name : '？？？'}</span>
+        ${unlocked ? '' : `<span class="lock-lv">Lv${l.lv}</span>`}
+      </div>`;
+    }).join('');
+    rg.querySelectorAll('.reward-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        if (cell.dataset.locked) { showToast('まだロック中だよ🔒'); return; }
+        const rid = cell.dataset.reward;
+        state.accessory = (state.accessory === rid) ? '' : rid;
+        saveState();
+        applyAccessory();
+        cloudSavePartial({ accessory: state.accessory });
+        renderLevelCard();
+        playHappy();
+      });
+    });
+  }
+  applyAccessory();
+
   // ===== happy sound: ピッチが上に滑る "きゅん♡" + 鳥のさえずり =====
   function playHappy() {
     if (!state.soundOn) return;
@@ -2033,6 +2210,7 @@
     return n;
   }
   function renderCoach() {
+    try { renderLevelCard(); } catch (e) { console.warn('levelCard', e); }
     const byDay = state.byDay || {};
     const t = todayStr();
     const tdy = byDay[t] || {};
@@ -2172,6 +2350,91 @@
     const dt = new Date(y, m-1, d);
     return `${m}月${d}日 (${WEEK[dt.getDay()]})`;
   }
+  // ===== がんばりカレンダー (ヒートマップ) =====
+  function renderHeatmap(byDay) {
+    const el = $('heatmap');
+    if (!el) return;
+    const WEEKS = 16; // 約4ヶ月
+    const today = new Date();
+    // 今週の土曜まで埋めるため、グリッド末尾を週末に揃える
+    const cells = [];
+    let maxKcal = 1;
+    const dayKcal = {};
+    for (let i = WEEKS * 7 - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ymd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const e = byDay[ymd];
+      let k = 0;
+      if (e) EX_ORDER.forEach(t => k += calForType(t, e[t] || 0));
+      dayKcal[ymd] = k;
+      if (k > maxKcal) maxKcal = k;
+      cells.push({ ymd, k, dow: d.getDay(), isToday: i === 0 });
+    }
+    const lvl = (k) => {
+      if (k <= 0) return '';
+      const r = k / maxKcal;
+      if (r > 0.66) return ' l4';
+      if (r > 0.33) return ' l3';
+      if (r > 0.1)  return ' l2';
+      return ' l1';
+    };
+    const cellHtml = cells.map(c =>
+      `<div class="hm-cell${lvl(c.k)}${c.isToday ? ' today' : ''}" title="${c.ymd}: ${c.k.toFixed(0)}kcal"></div>`
+    ).join('');
+    el.innerHTML = `
+      <div class="hm-wrap"><div class="hm-grid">${cellHtml}</div></div>
+      <div class="hm-legend">少 <span class="hm-cell"></span><span class="hm-cell l1"></span><span class="hm-cell l2"></span><span class="hm-cell l3"></span><span class="hm-cell l4"></span> 多</div>`;
+  }
+
+  // ===== 今週のふりかえり (週報) =====
+  function renderWeekly(byDay) {
+    const el = $('weeklyReport');
+    if (!el) return;
+    const sumRange = (startBack, days) => {
+      const acc = { kcal: 0, byType: {} };
+      EX_ORDER.forEach(t => acc.byType[t] = 0);
+      for (let i = startBack; i < startBack + days; i++) {
+        const ymd = prevDateStr(todayStr(), i);
+        const e = byDay[ymd];
+        if (!e) continue;
+        EX_ORDER.forEach(t => {
+          acc.byType[t] += e[t] || 0;
+          acc.kcal += calForType(t, e[t] || 0);
+        });
+      }
+      return acc;
+    };
+    const thisW = sumRange(0, 7);
+    const lastW = sumRange(7, 7);
+    const diff = thisW.kcal - lastW.kcal;
+    const pct = lastW.kcal > 0 ? Math.round(diff / lastW.kcal * 100) : (thisW.kcal > 0 ? 100 : 0);
+    const up = diff >= 0;
+    // 一番やった種目
+    let topType = null, topVal = -1;
+    EX_ORDER.forEach(t => { if (thisW.byType[t] > topVal) { topVal = thisW.byType[t]; topType = t; } });
+    const activeDays = (() => {
+      let n = 0;
+      for (let i = 0; i < 7; i++) {
+        const e = byDay[prevDateStr(todayStr(), i)];
+        if (e && EX_ORDER.some(t => (e[t]||0) > 0)) n++;
+      }
+      return n;
+    })();
+    let msg;
+    if (thisW.kcal === 0) msg = '今週はまだお休み中。1セットだけでも動いてみよ〜♡';
+    else if (diff > 0) msg = `先週より <b>${Math.abs(pct)}%</b> アップ！その調子えらい✨`;
+    else if (lastW.kcal === 0) msg = '今週から再スタート！いいぞ〜💪';
+    else msg = `先週よりすこしお休み気味。無理せず自分のペースでOK♡`;
+    el.innerHTML = `
+      <div><span class="wk-big">${thisW.kcal.toFixed(0)}<small> kcal (今週)</small></span>
+        <span class="wk-delta ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(diff).toFixed(0)}kcal</span></div>
+      <div class="wk-row"><span>運動した日</span><span><b>${activeDays}</b> / 7 日</span></div>
+      <div class="wk-row"><span>一番やったの</span><span>${topVal>0 ? EX_ICON[topType]+' '+EX_LABEL[topType]+' '+topVal+EX_UNIT[topType] : '—'}</span></div>
+      <div class="wk-row"><span>先週の消費</span><span>${lastW.kcal.toFixed(0)} kcal</span></div>
+      <div class="wk-msg">${msg}</div>`;
+  }
+
   // 直近14日の種目別カロリー比率をドーナツチャートで表示
   const KCAL_PER_DONUT = 250; // シナモンロール 1個 ≈ 250 kcal
   function renderChart(byDay) {
@@ -2254,8 +2517,10 @@
     const hasAny = (d.byDay && Object.keys(d.byDay).length) || (d.total && (d.total.reps || d.total.sec));
     $('dashStatus').textContent = hasAny ? '' : 'まだ記録がないよ〜';
 
-    // グラフ
-    renderChart(d.byDay || {});
+    // ヒートマップ・週報・ドーナツ (1つ落ちても他を巻き込まない)
+    try { renderHeatmap(d.byDay || {}); } catch (e) { console.warn('heatmap', e); }
+    try { renderWeekly(d.byDay || {}); } catch (e) { console.warn('weekly', e); }
+    try { renderChart(d.byDay || {}); } catch (e) { console.warn('chart', e); }
 
     // 日付ごとの集計
     const byDay = d.byDay || {};
