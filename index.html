@@ -1352,6 +1352,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
   import { initializeFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, increment, arrayUnion, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  import * as authApi from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+  import { coupleAuth } from "./coupleauth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBHXH8S-IUSUpTZ102XF4M6my3Lr4FDD_0",
@@ -1367,6 +1369,10 @@
     experimentalForceLongPolling: true,
     useFetchStreams: false
   });
+
+  // クラウドは許可された2人の Google アカウントだけ（firestore.rules でも同じ制限）。
+  // ログイン前はローカル保存のみで、記録は pendingSessions に溜まってログイン後に送られる。
+  let authed = false;
 
   // 固定の coupleId — このアプリは1組のカップル専用なので、URL分岐なしで常に同じドキュメントを使う
   const COUPLE_ID = 'masakasakasama-cinnamoroll-couple-2026';
@@ -1501,7 +1507,7 @@
   let snapshotCount = 0;
   // 起動時にonSnapshot張りっぱなし — 他端末の更新が即反映される
   function startCloudSync() {
-    if (!state.coupleId) return;
+    if (!state.coupleId || !authed) return;
     $('diagStatus').textContent = '🟡 接続中…';
     onSnapshot(doc(db, 'couples', state.coupleId), (snap) => {
       snapshotCount++;
@@ -1519,6 +1525,7 @@
   }
   // バックアップ: onSnapshot が無音でも getDoc で同期 (10秒タイムアウト付き)
   async function fallbackSync() {
+    if (!authed) return;
     try {
       const snap = await Promise.race([
         getDoc(doc(db, 'couples', COUPLE_ID)),
@@ -1612,7 +1619,7 @@
   // キューに溜まったセッションを順番にクラウドに送る
   let _flushing = false;
   async function flushPendingSessions() {
-    if (_flushing) return;
+    if (_flushing || !authed) return;
     if (!state.pendingSessions?.length) return;
     if (!state.coupleId) return;
     _flushing = true;
@@ -2834,8 +2841,17 @@
   applyNames();
   refreshStats();
   refreshPendingBadge();
-  startCloudSync(); // 起動からずっとクラウドと同期し続ける
-  flushPendingSessions(); // 起動時に未送信があれば即送る
+  $('diagStatus').textContent = '🔒 ログイン待ち';
+  coupleAuth(authApi, authApi.getAuth(fbApp), {
+    id: 'cinnamon',
+    label: 'ふたりの記録を同期するには Google でログインしてね',
+    onReady: () => {
+      authed = true;
+      startCloudSync(); // ログイン後ずっとクラウドと同期し続ける
+      fallbackSync();
+      flushPendingSessions(); // 未送信があれば即送る
+    },
+  });
   setTimeout(() => showSpeech(pick(cheers.idleHi()), 2400), 400);
   if (isViewMode) switchTab('stats');
 </script>
